@@ -30,6 +30,7 @@ jobs:
             {  db-org: redis, db-name: redis, db-version: 8.6.2, json-module-version: bundled },
             {  db-org: valkey-io, db-name: valkey, db-version: 7.2.12, json-module-version: v2.6.22 },
             {  db-org: valkey-io, db-name: valkey, db-version: 8.0.7, json-module-version: v2.6.22 },
+            {  db-org: valkey-io, db-name: valkey, db-version: 8.1,6, json-module-version: v2.6.22 },
             {  db-org: valkey-io, db-name: valkey, db-version: 9.0.3, json-module-version: v2.6.22 },
           ]
 
@@ -273,7 +274,7 @@ jobs:
       - uses: actions/checkout@v6
 
   flag-frenzy:
-    needs: [lint, build-and-test]
+    needs: [lint]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
@@ -287,7 +288,7 @@ jobs:
           flag-frenzy --package redis
 
   windows-build:
-    needs: [lint, build-and-test, examples]
+    needs: [lint]
     runs-on: windows-latest
     steps:
       - name: Checkout
