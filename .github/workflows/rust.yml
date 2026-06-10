@@ -17,7 +17,7 @@ concurrency:
 jobs:
   windows-build:
     needs: []
-    runs-on: windows-latest
+    runs-on: windows-2025
     steps:
       - name: Checkout
         uses: actions/checkout@v6
