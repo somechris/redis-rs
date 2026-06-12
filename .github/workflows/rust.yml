@@ -219,7 +219,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
         with:
-          # Only needed to make sure the `baseline_rev` (see below) is
+          # Only needed to make sure the `baseline-rev` (see below) is
           # available
           fetch-depth: 100
 
@@ -253,7 +253,7 @@ jobs:
           # Temporary baseline to address #2135
           # Once we can, this should get removed again (along with the
           # `fetch-depth` in the `actions/checkout` above).
-          baseline_rev: 5286844b418f1533b48aa8fca620289b5828fae5
+          baseline-rev: 5286844b418f1533b48aa8fca620289b5828fae5
 
   benchmark:
     needs: lint
