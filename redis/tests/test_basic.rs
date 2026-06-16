@@ -369,8 +369,8 @@ mod basic {
 
     #[test]
     fn test_hash_expiration() {
-        // Hash expiration is only supported in Redis 7.4.0 and later.
-        let ctx = run_test_if_version_supported!(&REDIS_CE_7_4);
+        // Hash expiration is only supported in Redis 7.4+ and Valkey 9.0+
+        let ctx = run_test_if_version_supported!(&[&REDIS_CE_7_4, &VALKEY_9_0]);
 
         let mut con = ctx.connection();
         redis::cmd("HMSET")
@@ -484,7 +484,8 @@ mod basic {
     /// 5. Attempting to delete a field from a non-existing hash results in a NIL response.
     #[test]
     fn test_hget_del() {
-        let ctx = run_test_if_version_supported!(&REDIS_CE_8_0);
+        // `HGETDEL` is only supported in Redis 8.0+ and Valkey 9.1+
+        let ctx = run_test_if_version_supported!(&[&REDIS_CE_8_0, &VALKEY_9_1]);
         let mut con = ctx.connection();
         // Create a hash with multiple fields and values that will be used for testing
         assert_eq!(con.hset_multiple(HASH_KEY, &HASH_FIELDS_AND_VALUES), Ok(()));
@@ -561,7 +562,8 @@ mod basic {
     /// 6. Attempting to retrieve a field from a non-existing hash returns in a NIL response.
     #[test]
     fn test_hget_ex() {
-        let ctx = run_test_if_version_supported!(&REDIS_CE_8_0);
+        // `HGETEX` is only supported in Redis 8.0+ and Valkey 9.0+
+        let ctx = run_test_if_version_supported!(&[&REDIS_CE_8_0, &VALKEY_9_0]);
         let mut con = ctx.connection();
         // Create a hash with multiple fields and values that will be used for testing
         assert_eq!(con.hset_multiple(HASH_KEY, &HASH_FIELDS_AND_VALUES), Ok(()));
@@ -680,7 +682,8 @@ mod basic {
     /// as well as removing an existing expiration using the PERSIST option.
     #[test]
     fn test_hget_ex_field_expiration_options() {
-        let ctx = run_test_if_version_supported!(&REDIS_CE_8_0);
+        // `HGETEX` is only supported in Redis 8.0+ and Valkey 9.0+
+        let ctx = run_test_if_version_supported!(&[&REDIS_CE_8_0, &VALKEY_9_0]);
         let mut con = ctx.connection();
         // Create a hash with multiple fields and values that will be used for testing
         assert_eq!(con.hset_multiple(HASH_KEY, &HASH_FIELDS_AND_VALUES), Ok(()));
@@ -775,7 +778,8 @@ mod basic {
     ///        and verifies that their values have been modified and the fields are set to expire.
     #[test]
     fn test_hset_ex() {
-        let ctx = run_test_if_version_supported!(&REDIS_CE_8_0);
+        // `HSETEX` is only supported in Redis 8.0+ and Valkey 9.0+
+        let ctx = run_test_if_version_supported!(&[&REDIS_CE_8_0, &VALKEY_9_0]);
         let mut con = ctx.connection();
 
         let generated_hash_key = generate_random_testing_hash_key(&mut con);
@@ -961,7 +965,8 @@ mod basic {
     /// as well as keeping an existing expiration using the KEEPTTL option.
     #[test]
     fn test_hsetex_field_expiration_options() {
-        let ctx = run_test_if_version_supported!(&REDIS_CE_8_0);
+        // `HSETEX` is only supported in Redis 8.0+ and Valkey 9.0+
+        let ctx = run_test_if_version_supported!(&[&REDIS_CE_8_0, &VALKEY_9_0]);
         let mut con = ctx.connection();
         // Create a hash with multiple fields and values that will be used for testing
         assert_eq!(con.hset_multiple(HASH_KEY, &HASH_FIELDS_AND_VALUES), Ok(()));
@@ -1023,7 +1028,8 @@ mod basic {
 
     #[test]
     fn test_hsetex_can_update_the_expiration_of_a_field_that_has_already_been_set_to_expire() {
-        let ctx = run_test_if_version_supported!(&REDIS_CE_8_0);
+        // `HSETEX` is only supported in Redis 8.0+ and Valkey 9.0+
+        let ctx = run_test_if_version_supported!(&[&REDIS_CE_8_0, &VALKEY_9_0]);
         let mut con = ctx.connection();
         // Create a hash with multiple fields and values that will be used for testing
         assert_eq!(con.hset_multiple(HASH_KEY, &HASH_FIELDS_AND_VALUES), Ok(()));
@@ -2207,7 +2213,7 @@ mod basic {
 
     #[test]
     fn test_bit_operations() {
-        let ctx = run_test_if_version_supported!(&REDIS_CE_8_2);
+        let ctx = TestContext::new();
         let mut con = ctx.connection();
 
         fn perform_bitwise_operation<F>(str1: &str, str2: &str, op: F) -> String
@@ -2281,6 +2287,9 @@ mod basic {
         assert_eq!(con.bit_not(result, random_key), Ok(1));
         let not_result: Vec<u8> = redis::Commands::get(&mut con, result).unwrap();
         assert_eq!(not_result, vec![!key_values.get(random_key).unwrap()[0]]);
+
+        // `BITOPS` mode `DIFF` is only supported in Redis 8.2+ (but not Valkey<=9.1)
+        skip_if_context_does_not_support!(ctx, &REDIS_CE_8_2);
 
         // BITOP DIFF
         // DIFF(K1, K2, K3) = K1 ∧ ¬(K2 ∨ K3) = Members of K1 that are not members of any of K2, K3
@@ -2731,7 +2740,8 @@ mod basic {
     /// The test validates the IFEQ value comparison option for the SET command
     #[test]
     fn test_set_value_comparison_value_equals() {
-        let ctx = run_test_if_version_supported!(&REDIS_CE_8_4);
+        // `SET` option `IFEQ` is only supported in Redis 8.4+ and Valkey 8.1+
+        let ctx = run_test_if_version_supported!(&[&REDIS_CE_8_4, &VALKEY_8_1]);
         let mut con = ctx.connection();
 
         let key = "test_ifeq_key";
@@ -2790,6 +2800,7 @@ mod basic {
     /// The test validates the IFNE value comparison option for the SET command
     #[test]
     fn test_set_value_comparison_value_not_equals() {
+        // `SET` option `IFNE` is only supported in Redis 8.4+ (but not Valkey<=9.1)
         let ctx = run_test_if_version_supported!(&REDIS_CE_8_4);
         let mut con = ctx.connection();
 
@@ -2855,6 +2866,7 @@ mod basic {
     /// The test validates the DIGEST command
     #[test]
     fn test_digest_command() {
+        // `DIGEST` is only supported in Redis 8.4+ (but not Valkey<=9.1)
         let ctx = run_test_if_version_supported!(&REDIS_CE_8_4);
         let mut con = ctx.connection();
 
@@ -2899,6 +2911,7 @@ mod basic {
     /// The test validates the IFDEQ value comparison option for the SET command
     #[test]
     fn test_set_value_comparison_digest_equals() {
+        // `SET` option `IFDEQ` is only supported in Redis 8.4+ (but not Valkey<=9.1)
         let ctx = run_test_if_version_supported!(&REDIS_CE_8_4);
         let mut con = ctx.connection();
 
@@ -2962,6 +2975,7 @@ mod basic {
     /// The test validates the IFDNE value comparison option for the SET command
     #[test]
     fn test_set_value_comparison_digest_not_equals() {
+        // `SET` option `IFDNE` is only supported in Redis 8.4+ (but not Valkey<=9.1)
         let ctx = run_test_if_version_supported!(&REDIS_CE_8_4);
         let mut con = ctx.connection();
 
@@ -3030,6 +3044,7 @@ mod basic {
 
     #[test]
     fn test_del_ex() {
+        // `DELEX` is only supported in Redis 8.4+ (but not Valkey<=9.1)
         let ctx = run_test_if_version_supported!(&REDIS_CE_8_4);
         let mut con = ctx.connection();
 
@@ -3159,7 +3174,8 @@ mod basic {
     /// Test the MSETEX command with the NX existence option
     #[test]
     fn test_mset_ex_nx() {
-        let ctx = run_test_if_version_supported!(&REDIS_CE_8_4);
+        // `MSETEX` option `NX` is only supported in Redis 8.4+ and Valkey 9.1+
+        let ctx = run_test_if_version_supported!(&[&REDIS_CE_8_4, &VALKEY_9_1]);
         let mut con = ctx.connection();
 
         let key1 = "mset_ex_nx_key1";
@@ -3205,7 +3221,8 @@ mod basic {
     /// Test the MSETEX command with the XX existence option
     #[test]
     fn test_mset_ex_xx() {
-        let ctx = run_test_if_version_supported!(&REDIS_CE_8_4);
+        // `MSETEX` option `XX` is only supported in Redis 8.4+ and Valkey 9.1+
+        let ctx = run_test_if_version_supported!(&[&REDIS_CE_8_4, &VALKEY_9_1]);
         let mut con = ctx.connection();
 
         let key1 = "mset_ex_xx_key1";
@@ -3259,7 +3276,8 @@ mod basic {
     /// Test the MSETEX command with all supported expiration options
     #[test]
     fn test_mset_ex_expiration_options() {
-        let ctx = run_test_if_version_supported!(&REDIS_CE_8_4);
+        // `MSETEX` expiry options are only supported in Redis 8.4+ and Valkey 9.1+
+        let ctx = run_test_if_version_supported!(&[&REDIS_CE_8_4, &VALKEY_9_1]);
         let mut con = ctx.connection();
 
         let current_timestamp = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
@@ -3367,8 +3385,8 @@ mod basic {
 
     #[test]
     fn test_expire_time() {
-        // EXPIRETIME/PEXPIRETIME is available from Redis version 7.4.0
-        let ctx = run_test_if_version_supported!(&REDIS_CE_7_4);
+        // EXPIRETIME/PEXPIRETIME is only supported in Redis 7.0+
+        let ctx = run_test_if_version_supported!(&REDIS_CE_7_0);
 
         let mut con = ctx.connection();
 
@@ -3612,6 +3630,7 @@ mod basic {
     #[test]
     #[cfg(feature = "vector-sets")]
     fn test_vector_sets_basic_operations() {
+        // `VADD` is only supported in Redis 8.0+ (but not Valkey<=9.1)
         let ctx = run_test_if_version_supported!(&REDIS_CE_8_0);
         let mut con = ctx.connection();
 
@@ -3696,6 +3715,7 @@ mod basic {
     #[test]
     #[cfg(feature = "vector-sets")]
     fn test_vector_sets_similarity_search() {
+        // `VADD` is only supported in Redis 8.0+ (but not Valkey<=9.1)
         let ctx = run_test_if_version_supported!(&REDIS_CE_8_0);
         let mut con = ctx.connection();
 
@@ -3877,6 +3897,7 @@ mod basic {
     #[test]
     #[cfg(feature = "vector-sets")]
     fn test_vector_sets_auxiliary_commands() {
+        // `VADD` is only supported in Redis 8.0+ (but not Valkey<=9.1)
         let ctx = run_test_if_version_supported!(&REDIS_CE_8_0);
         let mut con = ctx.connection();
 
@@ -4108,6 +4129,7 @@ mod basic {
     #[test]
     #[cfg(feature = "vector-sets")]
     fn test_vector_sets_edge_cases() {
+        // `VADD` is only supported in Redis 8.0+ (but not Valkey<=9.1)
         let ctx = run_test_if_version_supported!(&REDIS_CE_8_0);
         let mut con = ctx.connection();
 

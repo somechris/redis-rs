@@ -3,7 +3,7 @@
 use redis::ConnectionLike;
 use std::collections::HashMap;
 
-// Redis version constants for version-gated tests
+// Version constants for version-gated tests
 pub const REDIS_CE_6_0: Component = ("redis", (6, 0, 0));
 pub const REDIS_CE_7_0: Component = ("redis", (7, 0, 0));
 pub const REDIS_CE_7_2: Component = ("redis", (7, 2, 0));
@@ -12,6 +12,13 @@ pub const REDIS_CE_8_0: Component = ("redis", (8, 0, 0));
 pub const REDIS_CE_8_2: Component = ("redis", (8, 1, 240));
 pub const REDIS_CE_8_4: Component = ("redis", (8, 3, 224));
 pub const REDIS_CE_8_6: Component = ("redis", (8, 6, 0));
+
+// Valkey forked off at Redis 7.2.4 and still repords it's Redis version 7.2.4. So tests that run
+// on Redis<=7.2.4 automatically also run on Valkey, and we only need version guards for later
+// versions.
+pub const VALKEY_8_1: Component = ("valkey", (8, 1, 0));
+pub const VALKEY_9_0: Component = ("valkey", (9, 0, 0));
+pub const VALKEY_9_1: Component = ("valkey", (9, 1, 0));
 
 /// Version of a software component
 pub type Version = (u16, u16, u16);
