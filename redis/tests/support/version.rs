@@ -4,14 +4,14 @@ use redis::ConnectionLike;
 use std::collections::HashMap;
 
 // Redis version constants for version-gated tests
-pub const REDIS_VERSION_CE_6_0: Component = ("redis", (6, 0, 0));
-pub const REDIS_VERSION_CE_7_0: Component = ("redis", (7, 0, 0));
-pub const REDIS_VERSION_CE_7_2: Component = ("redis", (7, 2, 0));
-pub const REDIS_VERSION_CE_7_4: Component = ("redis", (7, 4, 0));
-pub const REDIS_VERSION_CE_8_0: Component = ("redis", (8, 0, 0));
-pub const REDIS_VERSION_CE_8_2: Component = ("redis", (8, 1, 240));
-pub const REDIS_VERSION_CE_8_4: Component = ("redis", (8, 3, 224));
-pub const REDIS_VERSION_CE_8_6: Component = ("redis", (8, 6, 0));
+pub const REDIS_CE_6_0: Component = ("redis", (6, 0, 0));
+pub const REDIS_CE_7_0: Component = ("redis", (7, 0, 0));
+pub const REDIS_CE_7_2: Component = ("redis", (7, 2, 0));
+pub const REDIS_CE_7_4: Component = ("redis", (7, 4, 0));
+pub const REDIS_CE_8_0: Component = ("redis", (8, 0, 0));
+pub const REDIS_CE_8_2: Component = ("redis", (8, 1, 240));
+pub const REDIS_CE_8_4: Component = ("redis", (8, 3, 224));
+pub const REDIS_CE_8_6: Component = ("redis", (8, 6, 0));
 
 /// Version of a software component
 pub type Version = (u16, u16, u16);
