@@ -1,3 +1,5 @@
+hammer:
+	for i in $$(seq 100 ); do REDISRS_SERVER_TYPE=tcp RUST_BACKTRACE=1 PROTOCOL=RESP3 cargo nextest run -p redis --all-features --test test_basic --retries 0 -- freq 2>&1 | grep freq ; done
 build:
 	@RUSTFLAGS="-D warnings" cargo build --locked -p redis
 
