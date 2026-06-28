@@ -137,7 +137,7 @@ impl AvailableComponents {
             };
 
             // Turn into raw component name and version
-            let Some((name, version)) = Self::parse_info_kv(key.trim(), value.trim()) else {
+            let Some((mut name, version)) = Self::parse_info_kv(key.trim(), value.trim()) else {
                 continue;
             };
 
@@ -149,14 +149,14 @@ impl AvailableComponents {
             // around that is at https://github.com/orgs/valkey-io/discussions/3934
             if name == "bf" {
                 if version > (8, 0, 0) {
-                    name = "redis:bf";
+                    name = "redis:bf".to_string();
                 } else {
-                    name = "valkey:bf";
+                    name = "valkey:bf".to_string();
                 }
             }
 
             // Store them
-            ret.insert(name.to_owned(), version);
+            ret.insert(name, version);
         }
         ret
     }
