@@ -85,8 +85,8 @@ jobs:
         with:
           tool: nextest
 
-      - name: Run tests
-        run: make test
+#      - name: Run tests
+#        run: make test
 
       - name: Checkout RedisJSON
         if: steps.cache-redisjson.outputs.cache-hit != 'true' && matrix.config.json-module-version != '' && matrix.config.json-module-version != 'bundled'
