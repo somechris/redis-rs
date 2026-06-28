@@ -162,11 +162,14 @@ jobs:
 
       - name: Build Valkey Bloom repo
         if: startsWith(matrix.config.bloom-module-version, 'valkey-bloom:') && steps.cache-valkey-bloom.cache-hit != 'true'
+        env:
+          VALKEY_BLOOM: ${{matrix.config.bloom-module-version}}
+        shell: bash
         run: |
           # Fetch and unpack valkey-bloom's code
-          wget "https://github.com/valkey-io/valkey-bloom/archive/refs/tags/{{matrix.config.bloom-module-version[13:]}}.tar.gz"
-          tar -xzvf "${{matrix.config.bloom-module-version[13:]}}.tar.gz"
-          mv "valkey-bloom-${{matrix.config.bloom-module-version[13:]}}" "valkey-bloom"
+          wget "https://github.com/valkey-io/valkey-bloom/archive/refs/tags/${VALKEY_BLOOM#*:}.tar.gz"
+          tar -xzvf "${VALKEY_BLOOM#*:}.tar.gz"
+          mv "valkey-bloom-${VALKEY_BLOOM#*:}" "valkey-bloom"
 
           # Build it
           cd "valkey-bloom"
