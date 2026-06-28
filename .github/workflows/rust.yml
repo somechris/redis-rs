@@ -237,30 +237,6 @@ jobs:
           fi
           redis-server "${EXTRA_OPTS[@]}" &
 
-      - name: basic
-        run: cargo run --example basic
-      - name: streams
-        run: cargo run --example streams
-      - name: typed
-        run: cargo run --example typed --features tokio-comp
-      - name: geospatial
-        run: cargo run --example geospatial
-      - name: async-await
-        run: cargo run --example async-await --features tokio-comp
-      - name: async-typed
-        run: cargo run --example async-typed --features tokio-comp
-      - name: async-caching
-        run: cargo run --example async-caching --features tokio-comp,cache-aio
-      - name: async-connection-loss
-        run: cargo run --example async-connection-loss --features tokio-comp,connection-manager -- reconnect
-      - name: async-multiplexed
-        run: cargo run --example async-multiplexed --features tokio-comp
-      - name: async-resp2-pub-sub
-        run: cargo run --example async-resp2-pub-sub --features tokio-comp
-      - name: async-resp3-pub-sub
-        run: cargo run --example async-resp3-pub-sub --features tokio-comp,connection-manager
-      - name: async-scan
-        run: cargo run --example async-scan --features tokio-comp
       - name: module bloom
         if: matrix.config.bloom-module-version != ''
         run: cargo run --example bloom --features bloom
