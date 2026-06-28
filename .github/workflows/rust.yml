@@ -156,6 +156,7 @@ jobs:
         id: cache-valkey-bloom
         uses: actions/cache@v5
         with:
+          path: |
             /tmp/valkey-bloom/target/release/libvalkey_bloom.so
         key: ${{ runner.os }}-valkey-bloom-${{ matrix.config.bloom-module-version }}
 
