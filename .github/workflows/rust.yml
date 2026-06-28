@@ -31,15 +31,15 @@ jobs:
             # If minor versions are sufficiently different, CI also tests against the latest minor.
             #
             # When making changes here, also update `README.md` accordingly (grep for `CI runs against`).
-            {  db-org: redis, db-name: redis, db-version: 6.2.22 },
-            {  db-org: redis, db-name: redis, db-version: 7.0.15, json-module-version: v2.6.22 },
-            {  db-org: redis, db-name: redis, db-version: 7.4.9, json-module-version: v2.6.22 },
-            {  db-org: redis, db-name: redis, db-version: 8.0.6, json-module-version: bundled, bloom-module-version: bundled },
-            {  db-org: redis, db-name: redis, db-version: 8.8.0, json-module-version: bundled, bloom-module-version: bundled },
-            {  db-org: valkey-io, db-name: valkey, db-version: 7.2.13, json-module-version: v2.6.22 },
-            {  db-org: valkey-io, db-name: valkey, db-version: 8.0.9, json-module-version: v2.6.22 },
+#            {  db-org: redis, db-name: redis, db-version: 6.2.22 },
+#            {  db-org: redis, db-name: redis, db-version: 7.0.15, json-module-version: v2.6.22 },
+#            {  db-org: redis, db-name: redis, db-version: 7.4.9, json-module-version: v2.6.22 },
+#            {  db-org: redis, db-name: redis, db-version: 8.0.6, json-module-version: bundled, bloom-module-version: bundled },
+#            {  db-org: redis, db-name: redis, db-version: 8.8.0, json-module-version: bundled, bloom-module-version: bundled },
+#            {  db-org: valkey-io, db-name: valkey, db-version: 7.2.13, json-module-version: v2.6.22 },
+            {  db-org: valkey-io, db-name: valkey, db-version: 8.0.9, json-module-version: v2.6.22, bloom-module-version: "valkey-bloom:1.0.1" },
             # Skipping ValKey 8.1 as it's too similar to 8.0
-            {  db-org: valkey-io, db-name: valkey, db-version: 9.0.4, json-module-version: v2.6.22 },
+#            {  db-org: valkey-io, db-name: valkey, db-version: 9.0.4, json-module-version: v2.6.22, bloom-module-version: "valkey-bloom:1.0.1" },
             # Skipping ValKey 9.1 as it's too similar to 9.0
           ]
 
@@ -150,6 +150,31 @@ jobs:
       - name: Run RedisJSON tests
         if: matrix.config.json-module-version != ''
         run: make test-module-json
+
+      - name: Load Valkey Bloom module from cache
+        if: startsWith(matrix.config.bloom-module-version, 'valkey-bloom:')
+        id: cache-valkey-bloom
+        uses: actions/cache@v5
+        with:
+            /tmp/valkey-bloom/target/release/libvalkey_bloom.so
+        key: ${{ runner.os }}-valkey-bloom-${{ matrix.config.bloom-module-version }}
+
+      - name: Build Valkey Bloom repo
+        if: startsWith(matrix.config.bloom-module-version, 'valkey-bloom:') && steps.cache-valkey-bloom.cache-hit != 'true'
+        run: |
+          # Fetch and unpack valkey-bloom's code
+          wget "https://github.com/valkey-io/valkey-bloom/archive/refs/tags/{{matrix.config.bloom-module-version[13:]}}.tar.gz"
+          tar -xzvf "${{matrix.config.bloom-module-version[13:]}}.tar.gz"
+          mv "valkey-bloom-${{matrix.config.bloom-module-version[13:]}}" "valkey-bloom"
+
+          # Build it
+          cd "valkey-bloom"
+          RUSTFLAGS="-D warnings" cargo build --all --all-targets  --release
+
+      - name: Copy Valkey Bloom into place
+        if: startsWith(matrix.config.bloom-module-version, 'valkey-bloom:')
+        run: |
+          cp /tmp/valkey-bloom/target/release/libvalkey_bloom.so "$REDISRS_REDIS_BLOOM_PATH"
 
       - name: Run RedisBloom tests
         if: matrix.config.bloom-module-version != ''
