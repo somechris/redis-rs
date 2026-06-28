@@ -167,8 +167,10 @@ jobs:
         shell: bash
         run: |
           # Fetch and unpack valkey-bloom's code
+          cd /tmp
           wget "https://github.com/valkey-io/valkey-bloom/archive/refs/tags/${VALKEY_BLOOM#*:}.tar.gz"
           tar -xzvf "${VALKEY_BLOOM#*:}.tar.gz"
+          rm -rf "valkey-bloom"
           mv "valkey-bloom-${VALKEY_BLOOM#*:}" "valkey-bloom"
 
           # Build it
