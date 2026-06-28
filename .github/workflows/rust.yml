@@ -215,6 +215,20 @@ jobs:
           db-name: ${{ matrix.config.db-name }}
           db-version: ${{ matrix.config.db-version }}
 
+      - name: Load Valkey Bloom module from cache
+        if: startsWith(matrix.config.bloom-module-version, 'valkey-bloom:')
+        id: cache-valkey-bloom
+        uses: actions/cache@v5
+        with:
+          path: |
+            /tmp/valkey-bloom/target/release/libvalkey_bloom.so
+          key: ${{ runner.os }}-valkey-bloom-${{ matrix.config.bloom-module-version }}
+
+      - name: Copy Valkey Bloom into place
+        if: startsWith(matrix.config.bloom-module-version, 'valkey-bloom:')
+        run: |
+          cp /tmp/valkey-bloom/target/release/libvalkey_bloom.so "$REDISRS_REDIS_BLOOM_PATH"
+
       - name: Copy bundled RedisBloom into place
         if: matrix.config.bloom-module-version == 'bundled'
         run: |
