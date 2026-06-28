@@ -184,7 +184,10 @@ jobs:
 
       - name: Run RedisBloom tests
         if: matrix.config.bloom-module-version != ''
-        run: make test-module-bloom
+        run: |
+          echo "$REDISRS_REDIS_BLOOM_PATH"
+          ls -l "$REDISRS_REDIS_BLOOM_PATH"
+          make test-module-bloom
 
       - name: Cache RedisJSON
         if: matrix.config.json-module-version != '' && matrix.config.json-module-version != 'bundled'
