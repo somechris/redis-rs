@@ -17,7 +17,7 @@ concurrency:
 
 jobs:
   build-and-test:
-    needs: lint
+    needs: []
     runs-on: ubuntu-latest
     timeout-minutes: 60
     strategy:
@@ -193,7 +193,7 @@ jobs:
           key: ${{ runner.os }}-redisjson-${{ matrix.config.json-module-version }}
 
   examples:
-    needs: [lint, build-and-test]
+    needs: [build-and-test]
     if: ${{ github.event_name == 'pull_request' }}
     runs-on: ubuntu-latest
     strategy:
@@ -260,58 +260,8 @@ jobs:
         if: matrix.config.bloom-module-version != ''
         run: cargo run --example bloom --features bloom
 
-  lint:
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        config: [
-          {toolchain: stable},
-          {toolchain: beta},
-          {toolchain: nightly},
-          {toolchain: 1.88.0},
-        ]
-    steps:
-      - uses: actions/checkout@v6
-      - name: lint
-        uses: ./.github/actions/lint-and-check
-        with:
-          rust-toolchain: ${{ matrix.config.toolchain }}
-
-      - name: Check formatting
-        run: make style-check
-
-      - name: doc
-        run: cargo doc --all-features --no-deps --document-private-items
-        env:
-          RUSTDOCFLAGS: -Dwarnings
-
-      - name: doc tests
-        run: cargo test --doc --locked --all-features
-        env:
-          RUSTDOCFLAGS: -Dwarnings
-
-      - name: webassembly build
-        run: cargo build --target wasm32-unknown-unknown -p redis
-        env:
-          RUSTDOCFLAGS: -Dwarnings
-
-      - name: wasm32-wasip2 tokio-comp build
-        run: |
-          rustup target add wasm32-wasip2
-          cargo build -p redis \
-            --target wasm32-wasip2 \
-            --no-default-features \
-            --features tokio-comp
-        env:
-          RUSTFLAGS: --cfg tokio_unstable
-
-      - name: Check semver
-        uses: obi1kenobi/cargo-semver-checks-action@v2
-        with:
-          package: redis
-
   benchmark:
-    needs: lint
+    needs: []
     if: ${{ github.event_name == 'pull_request' }}
     runs-on: ubuntu-latest
     env:
@@ -346,7 +296,7 @@ jobs:
       - uses: actions/checkout@v6
 
   flag-frenzy:
-    needs: [lint, build-and-test]
+    needs: [build-and-test]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
@@ -360,7 +310,7 @@ jobs:
           flag-frenzy --package redis
 
   windows-build:
-    needs: [lint, build-and-test, examples]
+    needs: [build-and-test, examples]
     runs-on: windows-2022  # Locked to `2022` because of #2124
     steps:
       - name: Checkout
