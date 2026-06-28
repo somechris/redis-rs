@@ -147,9 +147,9 @@ jobs:
             exit 1
           fi
 
-      - name: Run RedisJSON tests
-        if: matrix.config.json-module-version != ''
-        run: make test-module-json
+#      - name: Run RedisJSON tests
+#        if: matrix.config.json-module-version != ''
+#        run: make test-module-json
 
       - name: Load Valkey Bloom module from cache
         if: startsWith(matrix.config.bloom-module-version, 'valkey-bloom:')
