@@ -276,11 +276,6 @@ impl TestContext {
     }
 
     #[cfg(feature = "tls-rustls")]
-    pub fn new_with_mtls() -> TestContext {
-        Self::with_modules_and_tls(&[], true, None)
-    }
-
-    #[cfg(feature = "tls-rustls")]
     pub fn new_with_cert_auth(tls_files: TlsFilePaths) -> TestContext {
         Self::new_with_cert_auth_field(tls_files, "CN")
     }
