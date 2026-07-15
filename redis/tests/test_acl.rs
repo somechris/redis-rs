@@ -2,10 +2,13 @@
 
 use redis::TypedCommands;
 use redis::acl::{AclInfo, Rule};
+use redis_test::run_test_if_version_supported;
+use redis_test::test_context::TestContext;
+use redis_test::version::REDIS_CE_7_2;
+
 use std::collections::HashSet;
 
 mod support;
-use crate::support::*;
 
 #[test]
 fn test_acl_whoami() {
@@ -319,6 +322,7 @@ mod token_based_authentication_acl_tests {
         aio::ConnectionLike,
         auth::{BasicAuth, StreamingCredentialsProvider},
     };
+    use redis_test::test_context::TestContext;
     use std::{
         pin::Pin,
         sync::{Arc, Mutex, Once, RwLock},

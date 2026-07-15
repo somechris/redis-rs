@@ -6,13 +6,18 @@ use redis::CommandCacheConfig;
 #[cfg(feature = "cluster-async")]
 use redis::cluster_routing::*;
 use redis::{AsyncCommands, RedisError, caching::CacheConfig};
+use redis_test::run_test_if_version_supported;
 #[cfg(feature = "json")]
 use redis_test::server::Module;
+use redis_test::test_context::TestContext;
+use redis_test::test_context::TestContextBuilder;
+use redis_test::version::REDIS_CE_7_2;
 #[cfg(feature = "json")]
 use serde_json::json;
 use std::collections::HashMap;
 use std::time::Duration;
 use test_macros::async_test;
+
 mod support;
 
 macro_rules! assert_hit {

@@ -2,10 +2,16 @@
 
 use redis::streams::*;
 use redis::{Connection, ToRedisArgs, TypedCommands};
+use redis_test::run_test_if_version_supported;
+use redis_test::test_context::TestContext;
+use redis_test::version::REDIS_CE_7_0;
+use redis_test::version::REDIS_CE_8_2;
+use redis_test::version::REDIS_CE_8_4;
+use redis_test::version::REDIS_CE_8_6;
+use redis_test::version::TestContextVersioning;
 
 #[macro_use]
 mod support;
-use crate::support::*;
 
 use assert_matches::assert_matches;
 use std::collections::BTreeMap;

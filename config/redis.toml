@@ -15,7 +15,7 @@ require = [
 ]
 
 [[rule]]
-when = ["tls-rustls"]
+when = ["tls-rustls", "OR", "tls-rustls-test"]
 forbid = [
   "tokio-comp",
   "OR",
@@ -127,7 +127,7 @@ forbid = "bigdecimal"
 # These features can't run by themselves
 [[rule]]
 when = true
-forbid = ["aio", "OR", "token-based-authentication"]
+forbid = ["aio", "OR", "aio-test", "OR", "token-based-authentication"]
 
 # If you're using the library with sentinel or targeting connection manager, you probably don't want cluster connections
 [[rule]]

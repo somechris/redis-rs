@@ -19,6 +19,8 @@ mod cluster {
         cluster_routing::{MultipleNodeRoutingInfo, RoutingInfo, SingleNodeRoutingInfo},
         cmd, from_redis_value, parse_redis_value,
     };
+    use redis_test::run_test_if_version_supported;
+    use redis_test::version::VALKEY_9_0;
     use redis_test::{
         cluster::{RedisCluster, RedisClusterConfiguration},
         redis_value,

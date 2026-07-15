@@ -132,6 +132,7 @@ tls-native-tls = ["dep:native-tls"]
 tls-rustls = ["dep:rustls", "rustls/std", "dep:rustls-native-certs"]
 tls-rustls-insecure = ["tls-rustls"]
 tls-rustls-webpki-roots = ["tls-rustls", "dep:webpki-roots"]
+tls-rustls-test = ["tls-rustls", "redis-test/tls-rustls"]
 smol-comp = ["aio", "dep:smol", "dep:smol-timeout", "dep:async-io"]
 smol-native-tls-comp = ["smol-comp", "dep:async-native-tls", "tls-native-tls"]
 smol-rustls-comp = ["smol-comp", "dep:futures-rustls", "tls-rustls"]
@@ -172,6 +173,7 @@ aio = [
   "combine/tokio",
   "dep:cfg-if",
 ]
+aio-test = ["aio", "redis-test/aio"]
 
 [dev-dependencies]
 async-trait = "0.1"

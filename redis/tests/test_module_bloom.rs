@@ -2,7 +2,6 @@
 
 mod support;
 
-use crate::support::*;
 use assert_matches::assert_matches;
 use redis::bloom::{
     BloomFilterDumpChunk, BloomFilterDumpIterator, BloomFilterInfoType, BloomFilterInsertOptions,
@@ -10,6 +9,10 @@ use redis::bloom::{
 };
 use redis::{TypedCommands, ValueType};
 use redis_test::server::Module;
+use redis_test::skip_if_context_does_not_support;
+use redis_test::test_context::TestContextBuilder;
+use redis_test::version::REDIS_BLOOM_ANY;
+use redis_test::version::TestContextVersioning;
 use std::vec;
 
 // Test keys

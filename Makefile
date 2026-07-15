@@ -30,7 +30,7 @@ test:
 	@echo "===================================================================="
 	@echo "Testing Connection Type TCP with native-TLS support"
 	@echo "===================================================================="
-	@RUSTFLAGS="-D warnings" REDISRS_SERVER_TYPE=tcp+tls RUST_BACKTRACE=1 cargo nextest run --locked -p redis --features=json,tokio-native-tls-comp,smol-native-tls-comp,connection-manager,cluster-async --profile tcp_tls
+	@RUSTFLAGS="-D warnings" REDISRS_SERVER_TYPE=tcp+tls RUST_BACKTRACE=1 cargo nextest run --locked -p redis --features=json,tokio-native-tls-comp,smol-native-tls-comp,connection-manager,cluster-async,aio-test --profile tcp_tls
 
 	@echo "===================================================================="
 	@echo "Testing Connection Type UNIX SOCKETS"

@@ -20,6 +20,7 @@ mod basic_async {
     #[cfg(feature = "json")]
     use redis_test::server::Module;
     use redis_test::server::{redis_settings, use_protocol};
+    use redis_test::test_context::{TestContext, TestContextBuilder};
     use std::sync::{
         Arc,
         atomic::{AtomicUsize, Ordering},
@@ -1649,6 +1650,7 @@ mod basic_async {
     #[cfg(feature = "tls-rustls")]
     mod mtls_test {
         use super::*;
+        use redis_test::utils::build_single_client;
 
         #[rstest::rstest]
         #[cfg_attr(feature = "tokio-comp", case::tokio(RuntimeType::Tokio))]
@@ -1656,10 +1658,7 @@ mod basic_async {
         fn test_should_connect_mtls(#[case] runtime: RuntimeType) {
             let ctx = TestContextBuilder::new().mtls(true).build();
 
-            let client =
-                build_single_client(ctx.server.connection_info(), &ctx.server.tls_paths, true)
-                    .unwrap();
-            let connect = client.get_multiplexed_async_connection();
+            let connect = ctx.client.get_multiplexed_async_connection();
             block_on_all(
                 async move {
                     let mut con = connect.await.unwrap();

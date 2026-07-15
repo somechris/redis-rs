@@ -33,7 +33,14 @@ mod cluster_async {
     use redis::{PushInfo, PushKind, cluster_async::ClusterConnection};
     use redis_test::cluster::{RedisCluster, RedisClusterConfiguration};
     use redis_test::redis_value;
+    use redis_test::run_test_if_version_supported;
     use redis_test::server::use_protocol;
+    use redis_test::skip_if_context_does_not_support;
+    use redis_test::version::REDIS_CE_7_0;
+    use redis_test::version::TestContextVersioning;
+    use redis_test::version::VALKEY_9_0;
+
+    use redis_test::utils::build_single_client;
     use test_macros::async_test;
     use tokio::{join, sync::mpsc::UnboundedReceiver};
 
