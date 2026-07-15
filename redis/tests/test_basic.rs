@@ -85,7 +85,7 @@ mod basic {
 
     #[test]
     fn test_args() {
-        let ctx = TestContext::new();
+        let ctx = TestContext::default();
         let mut con = ctx.connection();
 
         redis::cmd("SET")
@@ -106,7 +106,7 @@ mod basic {
 
     #[test]
     fn test_can_authenticate_with_username_and_password() {
-        let ctx = TestContext::new();
+        let ctx = TestContext::default();
         let mut con = ctx.connection();
 
         let username = "foo";
@@ -137,7 +137,7 @@ mod basic {
 
     #[test]
     fn test_getset() {
-        let ctx = TestContext::new();
+        let ctx = TestContext::default();
         let mut con = ctx.connection();
 
         redis::cmd("SET").arg("foo").arg(42).exec(&mut con).unwrap();
@@ -157,7 +157,7 @@ mod basic {
     //unit test for key_type function
     #[test]
     fn test_key_type() {
-        let ctx = TestContext::new();
+        let ctx = TestContext::default();
         let mut con = ctx.connection();
 
         // The key does not have a value
@@ -213,7 +213,7 @@ mod basic {
     #[test]
     fn test_client_tracking_doesnt_block_execution() {
         //It checks if the library distinguish a push-type message from the others and continues its normal operation.
-        let ctx = TestContext::new();
+        let ctx = TestContext::default();
         let mut con = ctx.connection();
         let (k1, k2): (i32, i32) = redis::pipe()
             .cmd("CLIENT")
@@ -249,7 +249,7 @@ mod basic {
 
     #[test]
     fn test_incr() {
-        let ctx = TestContext::new();
+        let ctx = TestContext::default();
         let mut con = ctx.connection();
 
         redis::cmd("SET").arg("foo").arg(42).exec(&mut con).unwrap();
@@ -258,7 +258,7 @@ mod basic {
 
     #[test]
     fn test_ping() {
-        let ctx = TestContext::new();
+        let ctx = TestContext::default();
         let mut con = ctx.connection();
 
         let res: String = con.ping_message("foobar").unwrap();
@@ -269,7 +269,7 @@ mod basic {
 
     #[test]
     fn test_getdel() {
-        let ctx = TestContext::new();
+        let ctx = TestContext::default();
         let mut con = ctx.connection();
 
         redis::cmd("SET").arg("foo").arg(42).exec(&mut con).unwrap();
@@ -284,7 +284,7 @@ mod basic {
 
     #[test]
     fn test_getex() {
-        let ctx = TestContext::new();
+        let ctx = TestContext::default();
         let mut con = ctx.connection();
 
         redis::cmd("SET")
@@ -327,7 +327,7 @@ mod basic {
 
     #[test]
     fn test_info() {
-        let ctx = TestContext::new();
+        let ctx = TestContext::default();
         let mut con = ctx.connection();
 
         let info: redis::InfoDict = redis::cmd("INFO").query(&mut con).unwrap();
@@ -340,7 +340,7 @@ mod basic {
 
     #[test]
     fn test_hash_ops() {
-        let ctx = TestContext::new();
+        let ctx = TestContext::default();
         let mut con = ctx.connection();
 
         redis::cmd("HSET")
@@ -1072,7 +1072,7 @@ mod basic {
     #[cfg(not(target_os = "windows"))]
     #[test]
     fn test_unlink() {
-        let ctx = TestContext::new();
+        let ctx = TestContext::default();
         let mut con = ctx.connection();
 
         redis::cmd("SET").arg("foo").arg(42).exec(&mut con).unwrap();
@@ -1086,7 +1086,7 @@ mod basic {
 
     #[test]
     fn test_set_ops() {
-        let ctx = TestContext::new();
+        let ctx = TestContext::default();
         let mut con = ctx.connection();
 
         assert_eq!(con.sadd("foo", &[1, 2, 3]), Ok(3));
@@ -1111,7 +1111,7 @@ mod basic {
 
     #[test]
     fn test_scan() {
-        let ctx = TestContext::new();
+        let ctx = TestContext::default();
         let mut con = ctx.connection();
 
         assert_eq!(con.sadd("foo", &[1, 2, 3]), Ok(3));
@@ -1129,7 +1129,7 @@ mod basic {
 
     #[test]
     fn test_optionals() {
-        let ctx = TestContext::new();
+        let ctx = TestContext::default();
         let mut con = ctx.connection();
 
         redis::cmd("SET").arg("foo").arg(1).exec(&mut con).unwrap();
@@ -1151,7 +1151,7 @@ mod basic {
 
     #[test]
     fn test_scanning() {
-        let ctx = TestContext::new();
+        let ctx = TestContext::default();
         let mut con = ctx.connection();
         let mut unseen = HashSet::new();
 
@@ -1181,7 +1181,7 @@ mod basic {
     fn test_checked_scanning_error() {
         const KEY_COUNT: u32 = 1000;
 
-        let ctx = TestContext::new();
+        let ctx = TestContext::default();
         let mut con = ctx.connection();
 
         // Insert a bunch of keys with legit UTF-8 first
@@ -1232,7 +1232,7 @@ mod basic {
 
     #[test]
     fn test_filtered_scanning() {
-        let ctx = TestContext::new();
+        let ctx = TestContext::default();
         let mut con = ctx.connection();
         let mut unseen = HashSet::new();
 
@@ -1259,7 +1259,7 @@ mod basic {
 
     #[test]
     fn test_scan_with_options_works() {
-        let ctx = TestContext::new();
+        let ctx = TestContext::default();
         let mut con = ctx.connection();
         for i in 0..20usize {
             con.append(format!("test/{i}"), i).unwrap();
@@ -1291,7 +1291,7 @@ mod basic {
 
     #[test]
     fn test_pipeline() {
-        let ctx = TestContext::new();
+        let ctx = TestContext::default();
         let mut con = ctx.connection();
 
         let ((k1, k2),): ((i32, i32),) = redis::pipe()
@@ -1314,7 +1314,7 @@ mod basic {
 
     #[test]
     fn test_pipeline_with_err() {
-        let ctx = TestContext::new();
+        let ctx = TestContext::default();
         let mut con = ctx.connection();
 
         redis::cmd("SET")
@@ -1354,7 +1354,7 @@ mod basic {
 
     #[test]
     fn test_pipeline_returns_server_errors() {
-        let ctx = TestContext::new();
+        let ctx = TestContext::default();
         let mut con = ctx.connection();
         let mut pipe = redis::pipe();
         pipe.set("x", "x-value")
@@ -1373,7 +1373,7 @@ mod basic {
 
     #[test]
     fn test_empty_pipeline() {
-        let ctx = TestContext::new();
+        let ctx = TestContext::default();
         let mut con = ctx.connection();
 
         redis::pipe().cmd("PING").ignore().exec(&mut con).unwrap();
@@ -1381,7 +1381,7 @@ mod basic {
 
     #[test]
     fn test_pipeline_transaction() {
-        let ctx = TestContext::new();
+        let ctx = TestContext::default();
         let mut con = ctx.connection();
 
         let ((k1, k2),): ((i32, i32),) = redis::pipe()
@@ -1405,7 +1405,7 @@ mod basic {
 
     #[test]
     fn test_pipeline_transaction_with_errors() {
-        let ctx = TestContext::new();
+        let ctx = TestContext::default();
         let mut con = ctx.connection();
 
         let _: () = con.set("x", 42).unwrap();
@@ -1442,7 +1442,7 @@ mod basic {
 
     #[test]
     fn test_pipeline_reuse_query() {
-        let ctx = TestContext::new();
+        let ctx = TestContext::default();
         let mut con = ctx.connection();
 
         let mut pl = redis::pipe();
@@ -1480,7 +1480,7 @@ mod basic {
 
     #[test]
     fn test_pipeline_reuse_query_clear() {
-        let ctx = TestContext::new();
+        let ctx = TestContext::default();
         let mut con = ctx.connection();
 
         let mut pl = redis::pipe();
@@ -1535,7 +1535,7 @@ mod basic {
 
     #[test]
     fn test_real_transaction() {
-        let ctx = TestContext::new();
+        let ctx = TestContext::default();
         let mut con = ctx.connection();
 
         let key = "the_key";
@@ -1569,7 +1569,7 @@ mod basic {
 
     #[test]
     fn test_real_transaction_highlevel() {
-        let ctx = TestContext::new();
+        let ctx = TestContext::default();
         let mut con = ctx.connection();
 
         let key = "the_key";
@@ -1593,7 +1593,7 @@ mod basic {
     #[test]
     fn test_pubsub() {
         use std::sync::{Arc, Barrier};
-        let ctx = TestContext::new();
+        let ctx = TestContext::default();
         let mut con = ctx.connection();
 
         // Connection for subscriber api
@@ -1664,7 +1664,7 @@ mod basic {
 
     #[test]
     fn test_pubsub_handles_timeout() {
-        let ctx = TestContext::new();
+        let ctx = TestContext::default();
         let mut con = ctx.connection();
 
         // Connection for subscriber api
@@ -1688,7 +1688,7 @@ mod basic {
     #[test]
     fn test_pubsub_send_ping() {
         use std::sync::{Arc, Barrier};
-        let ctx = TestContext::new();
+        let ctx = TestContext::default();
         let mut con = ctx.connection();
 
         // Connection for subscriber api
@@ -1753,7 +1753,7 @@ mod basic {
 
     #[test]
     fn pub_sub_subscription_to_multiple_channels() {
-        let ctx = TestContext::new();
+        let ctx = TestContext::default();
         let mut conn = ctx.connection();
         let mut pubsub_conn = conn.as_pubsub();
         pubsub_conn.subscribe(&["phonewave", "foo", "bar"]).unwrap();
@@ -1770,7 +1770,7 @@ mod basic {
 
     #[test]
     fn test_pubsub_unsubscribe() {
-        let ctx = TestContext::new();
+        let ctx = TestContext::default();
         let mut con = ctx.connection();
 
         let (tx, rx) = std::sync::mpsc::channel();
@@ -1822,7 +1822,7 @@ mod basic {
 
     #[test]
     fn test_pubsub_subscribe_while_messages_are_sent() {
-        let ctx = TestContext::new();
+        let ctx = TestContext::default();
         let mut conn_external = ctx.connection();
         let mut conn_internal = ctx.connection();
         let received = std::sync::Arc::new(std::sync::Mutex::new(Vec::new()));
@@ -1880,7 +1880,7 @@ mod basic {
 
     #[test]
     fn test_pubsub_unsubscribe_no_subs() {
-        let ctx = TestContext::new();
+        let ctx = TestContext::default();
         let mut con = ctx.connection();
 
         {
@@ -1895,7 +1895,7 @@ mod basic {
 
     #[test]
     fn test_pubsub_unsubscribe_one_sub() {
-        let ctx = TestContext::new();
+        let ctx = TestContext::default();
         let mut con = ctx.connection();
 
         {
@@ -1911,7 +1911,7 @@ mod basic {
 
     #[test]
     fn test_pubsub_unsubscribe_one_sub_one_psub() {
-        let ctx = TestContext::new();
+        let ctx = TestContext::default();
         let mut con = ctx.connection();
 
         {
@@ -1928,7 +1928,7 @@ mod basic {
 
     #[test]
     fn scoped_pubsub() {
-        let ctx = TestContext::new();
+        let ctx = TestContext::default();
         let mut con = ctx.connection();
 
         // Connection for subscriber api
@@ -1980,7 +1980,7 @@ mod basic {
 
     #[test]
     fn test_tuple_args() {
-        let ctx = TestContext::new();
+        let ctx = TestContext::default();
         let mut con = ctx.connection();
 
         redis::cmd("HMSET")
@@ -2007,7 +2007,7 @@ mod basic {
 
     #[test]
     fn test_nice_api() {
-        let ctx = TestContext::new();
+        let ctx = TestContext::default();
         let mut con = ctx.connection();
 
         assert_matches!(con.set("my_key", 42), Ok(_));
@@ -2030,7 +2030,7 @@ mod basic {
 
     #[test]
     fn test_auto_m_versions() {
-        let ctx = TestContext::new();
+        let ctx = TestContext::default();
         let mut con = ctx.connection();
 
         assert_matches!(con.mset(&[("key1", 1), ("key2", 2)]), Ok(_));
@@ -2047,7 +2047,7 @@ mod basic {
 
     #[test]
     fn test_nice_hash_api() {
-        let ctx = TestContext::new();
+        let ctx = TestContext::default();
         let mut con = ctx.connection();
 
         assert_eq!(
@@ -2110,7 +2110,7 @@ mod basic {
 
     #[test]
     fn test_nice_list_api() {
-        let ctx = TestContext::new();
+        let ctx = TestContext::default();
         let mut con = ctx.connection();
 
         assert_eq!(con.rpush("my_list", &[1, 2, 3, 4]), Ok(4));
@@ -2145,7 +2145,7 @@ mod basic {
 
     #[test]
     fn test_tuple_decoding_regression() {
-        let ctx = TestContext::new();
+        let ctx = TestContext::default();
         let mut con = ctx.connection();
 
         assert_matches!(con.del("my_zset"), Ok(_));
@@ -2164,7 +2164,7 @@ mod basic {
     #[test]
     fn test_tuple_decoding_from_iter() {
         const KEY: &str = "my_iter_tuple";
-        let ctx = TestContext::new();
+        let ctx = TestContext::default();
         let mut con = ctx.connection();
 
         let map = HashMap::from([("one", 1), ("two", 2), ("three", 3)]);
@@ -2197,7 +2197,7 @@ mod basic {
 
     #[test]
     fn test_setbit_and_getbit_single_offset() {
-        let ctx = TestContext::new();
+        let ctx = TestContext::default();
         let mut con = ctx.connection();
 
         assert_eq!(con.setbit("bitvec", 10, true), Ok(false));
@@ -2206,7 +2206,7 @@ mod basic {
 
     #[test]
     fn test_bit_operations() {
-        let ctx = TestContext::new();
+        let ctx = TestContext::default();
         let mut con = ctx.connection();
 
         fn perform_bitwise_operation<F>(str1: &str, str2: &str, op: F) -> String
@@ -2314,7 +2314,7 @@ mod basic {
 
     #[test]
     fn test_redis_server_down() {
-        let mut ctx = TestContext::new();
+        let mut ctx = TestContext::default();
         let mut con = ctx.connection();
 
         let ping = redis::cmd("PING").query::<String>(&mut con);
@@ -2331,7 +2331,7 @@ mod basic {
 
     #[test]
     fn test_zinterstore_weights() {
-        let ctx = TestContext::new();
+        let ctx = TestContext::default();
         let mut con = ctx.connection();
 
         con.zadd_multiple("zset1", &[(1, "one"), (2, "two"), (4, "four")])
@@ -2375,7 +2375,7 @@ mod basic {
 
     #[test]
     fn test_zunionstore_weights() {
-        let ctx = TestContext::new();
+        let ctx = TestContext::default();
         let mut con = ctx.connection();
 
         con.zadd_multiple("zset1", &[(1, "one"), (2, "two")])
@@ -2440,7 +2440,7 @@ mod basic {
 
     #[test]
     fn test_zrembylex() {
-        let ctx = TestContext::new();
+        let ctx = TestContext::default();
         let mut con = ctx.connection();
 
         let setname = "myzset";
@@ -2472,7 +2472,7 @@ mod basic {
     #[cfg(not(target_os = "windows"))]
     #[test]
     fn test_zrandmember() {
-        let ctx = TestContext::new();
+        let ctx = TestContext::default();
         let mut con = ctx.connection();
 
         let setname = "myzrandset";
@@ -2520,7 +2520,7 @@ mod basic {
 
     #[test]
     fn test_sismember() {
-        let ctx = TestContext::new();
+        let ctx = TestContext::default();
         let mut con = ctx.connection();
 
         let setname = "myset";
@@ -2538,7 +2538,7 @@ mod basic {
     #[cfg(not(target_os = "windows"))]
     #[test]
     fn test_smismember() {
-        let ctx = TestContext::new();
+        let ctx = TestContext::default();
         let mut con = ctx.connection();
 
         let setname = "myset";
@@ -2549,7 +2549,7 @@ mod basic {
 
     #[test]
     fn test_object_freq_command() {
-        let ctx = TestContext::new();
+        let ctx = TestContext::default();
         let mut con = ctx.connection();
 
         // Enable an LFU `maxmemory-policy`. This is required for `OBJECT FREQ` to work.
@@ -2578,7 +2578,7 @@ mod basic {
 
     #[test]
     fn test_object_idletime_command() {
-        let ctx = TestContext::new();
+        let ctx = TestContext::default();
         let mut con = ctx.connection();
 
         con.set("object_key_str", "object_value_str").unwrap();
@@ -2600,7 +2600,7 @@ mod basic {
 
     #[test]
     fn test_mget() {
-        let ctx = TestContext::new();
+        let ctx = TestContext::default();
         let mut con = ctx.connection();
 
         con.set(1, "1").unwrap();
@@ -2630,7 +2630,7 @@ mod basic {
 
     #[test]
     fn test_variable_length_get() {
-        let ctx = TestContext::new();
+        let ctx = TestContext::default();
         let mut con = ctx.connection();
 
         con.set(1, "1").unwrap();
@@ -2642,7 +2642,7 @@ mod basic {
 
     #[test]
     fn test_multi_generics() {
-        let ctx = TestContext::new();
+        let ctx = TestContext::default();
         let mut con = ctx.connection();
 
         assert_eq!(con.sadd(b"set1", vec![5, 42]), Ok(2));
@@ -2653,7 +2653,7 @@ mod basic {
 
     #[test]
     fn test_set_options_with_get() {
-        let ctx = TestContext::new();
+        let ctx = TestContext::default();
         let mut con = ctx.connection();
 
         let opts = SetOptions::default().get(true);
@@ -3361,7 +3361,7 @@ mod basic {
 
     #[test]
     fn test_copy() {
-        let ctx = TestContext::new();
+        let ctx = TestContext::default();
         let mut con = ctx.connection();
 
         let opts = CopyOptions::default();
@@ -3424,7 +3424,7 @@ mod basic {
 
     #[test]
     fn test_timeout_leaves_usable_connection() {
-        let ctx = TestContext::new();
+        let ctx = TestContext::default();
         let mut con = ctx.connection();
 
         con.set("key", "value").unwrap();
@@ -3521,7 +3521,7 @@ mod basic {
 
     #[test]
     fn test_blocking_sorted_set_api() {
-        let ctx = TestContext::new();
+        let ctx = TestContext::default();
         let mut con = ctx.connection();
 
         assert_matches!(con.zadd("a", "1a", 1), Ok(_));
@@ -3556,7 +3556,7 @@ mod basic {
 
     #[test]
     fn test_sorted_set_add_options() {
-        let ctx = TestContext::new();
+        let ctx = TestContext::default();
         let mut con = ctx.connection();
 
         // Scenario 1
@@ -4259,7 +4259,7 @@ mod basic {
 
     #[test]
     fn test_push_manager() {
-        let ctx = TestContext::new();
+        let ctx = TestContext::default();
         let redis = RedisConnectionInfo::default().set_protocol(ProtocolVersion::RESP3);
         let connection_info = ctx.server.connection_info().set_redis_settings(redis);
 
@@ -4306,7 +4306,7 @@ mod basic {
 
     #[test]
     fn test_push_manager_disconnection() {
-        let ctx = TestContext::new();
+        let ctx = TestContext::default();
         let redis = RedisConnectionInfo::default().set_protocol(ProtocolVersion::RESP3);
         let connection_info = ctx.server.connection_info().set_redis_settings(redis);
         let client = redis::Client::open(connection_info).unwrap();
@@ -4329,7 +4329,7 @@ mod basic {
     #[test]
     fn test_raw_pubsub_with_push_manager() {
         // Tests PubSub usage with raw connection.
-        let ctx = TestContext::new();
+        let ctx = TestContext::default();
         if !ctx.protocol.supports_resp3() {
             return;
         }
@@ -4424,7 +4424,7 @@ mod basic {
 
     #[test]
     fn test_select_db() {
-        let ctx = TestContext::new();
+        let ctx = TestContext::default();
         let redis = redis_settings().set_db(5);
         let connection_info = ctx.server.connection_info().set_redis_settings(redis);
 
@@ -4439,7 +4439,7 @@ mod basic {
 
     #[test]
     fn test_client_getname() {
-        let ctx = TestContext::new();
+        let ctx = TestContext::default();
         let mut con = ctx.connection();
         redis::cmd("CLIENT")
             .arg("SETNAME")
@@ -4452,14 +4452,14 @@ mod basic {
 
     #[test]
     fn test_client_id() {
-        let ctx = TestContext::new();
+        let ctx = TestContext::default();
         let mut con = ctx.connection();
         let _num = con.client_id().unwrap();
     }
 
     #[test]
     fn test_client_setname() {
-        let ctx = TestContext::new();
+        let ctx = TestContext::default();
         let mut con = ctx.connection();
         assert_eq!(con.client_setname("connection-name"), Ok(()));
         let res: String = redis::cmd("CLIENT").arg("GETNAME").query(&mut con).unwrap();
@@ -4468,7 +4468,7 @@ mod basic {
 
     #[test]
     fn test_role_primary() {
-        let ctx = TestContext::new();
+        let ctx = TestContext::default();
         let mut con = ctx.connection();
         let ret = redis::cmd("ROLE").query::<Role>(&mut con).unwrap();
         assert_matches!(ret, Role::Primary { .. });
@@ -4476,7 +4476,7 @@ mod basic {
 
     #[test]
     fn test_connection_timeout_on_busy_server() {
-        let ctx = TestContext::new();
+        let ctx = TestContext::default();
         let mut con = ctx.connection();
         // we stop the server on another thread, in order to move forwardd while the server is stopped.
         let handle = thread::spawn(move || {
@@ -4503,7 +4503,7 @@ mod basic {
 
     #[test]
     fn fail_on_empty_command() {
-        let ctx = TestContext::new();
+        let ctx = TestContext::default();
         let mut connection = ctx.connection();
 
         let error: RedisError = redis::Pipeline::new()
