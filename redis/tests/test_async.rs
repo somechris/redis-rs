@@ -9,6 +9,7 @@ mod basic_async {
     use assert_matches::assert_matches;
     use futures::{StreamExt, prelude::*};
     use futures_time::{future::FutureExt, task::sleep};
+    #[cfg(feature = "json")]
     use redis::{
         AsyncCommands, ErrorKind, IntoConnectionInfo, ParsingError, ProtocolVersion, PushKind,
         RedisConnectionInfo, RedisError, RedisResult, ScanOptions, ServerErrorKind, Value,
@@ -368,14 +369,10 @@ mod basic_async {
             .set("x", 142)
             .ignore()
             .json_get("x", ".path")
-            .unwrap()
             .ignore()
             .json_get("x", ".path")
-            .unwrap()
             .json_get("y", ".path")
-            .unwrap()
             .json_get("y", ".other")
-            .unwrap()
             .get("x");
 
         type IgnoreErrorsResult = (
