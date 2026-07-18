@@ -1,4 +1,23 @@
 // Generate implementation for function skeleton, we use this for `AsyncTypedCommands` because we want to be able to handle having a return type specified or unspecified with a fallback
+
+/// Chooses between two `tt`s
+///
+/// This is useful for selecting different `tt`s deponding on an optional macro parameter.
+///
+/// # Arguments
+///
+/// * `$chooser` - If this is present, yield `$first`. Otherwise, yield `$second`.
+/// * `$first` - The `tt` to yield if `$chooser` is present.
+/// * `$second` - The `tt` to yield if `$chooser` is missing.
+macro_rules! choose_tt {
+    ($chooser:ident, $first:tt, $second:tt) => {
+        $first
+    };
+    ($first:tt, $second:tt) => {
+        $second
+    };
+}
+
 #[cfg(feature = "aio")]
 macro_rules! implement_command_async {
     // If the return type is `Generic`, then we require the user to specify the return type
@@ -6,22 +25,22 @@ macro_rules! implement_command_async {
         $lifetime: lifetime
         $(#[$attr:meta])+
         fn $name:ident<$($tyargs:ident : $ty:ident),*>(
-            $($argname:ident: $argty:ty),*) $body:block Generic
+            $($argname:ident: $argty:ty),*) $body:block Generic $($fallible:ident)?
     ) => {
         implement_command_async!(
             $lifetime
             $(#[$attr])+
             fn $name<$($tyargs : $ty,)* RV: FromRedisValue>(
-                $($argname: $argty),*) $body RV
+                $($argname: $argty),*) $body RV $($fallible)?
         );
     };
 
-    // If return type is specified in the input skeleton, then we will return it in the generated function (note match rule `$rettype:ty`)
+    // If return type is specified in the input skeleton, then we will return it in the generated function (note match rule `$rettype`)
     (
         $lifetime: lifetime
         $(#[$attr:meta])+
         fn $name:ident<$($tyargs:ident : $ty:ident),*>(
-            $($argname:ident: $argty:ty),*) $body:block $rettype:ty
+            $($argname:ident: $argty:ty),*) $body:block $rettype:tt $($fallible:ident)?
     ) => {
         $(#[$attr])*
         #[inline]
@@ -43,22 +62,22 @@ macro_rules! implement_command_sync {
         $lifetime: lifetime
         $(#[$attr:meta])+
         fn $name:ident<$($tyargs:ident : $ty:ident),*>(
-            $($argname:ident: $argty:ty),*) $body:block Generic
+            $($argname:ident: $argty:ty),*) $body:block Generic $($fallible:ident)?
     ) => {
         implement_command_sync!(
             $lifetime
             $(#[$attr])+
             fn $name<$($tyargs : $ty,)* RV: FromRedisValue>(
-                $($argname: $argty),*) $body RV
+                $($argname: $argty),*) $body RV $($fallible)?
         );
     };
 
-    // If return type is specified in the input skeleton, then we will return it in the generated function (note match rule `$rettype:ty`)
+    // If return type is specified in the input skeleton, then we will return it in the generated function (note match rule `$rettype`)
     (
         $lifetime: lifetime
         $(#[$attr:meta])+
         fn $name:ident<$($tyargs:ident : $ty:ident),*>(
-            $($argname:ident: $argty:ty),*) $body:block $rettype:ty
+            $($argname:ident: $argty:ty),*) $body:block $rettype:tt $($fallible:ident)?
     ) => {
         $(#[$attr])*
         #[inline]
@@ -69,7 +88,7 @@ macro_rules! implement_command_sync {
         ) -> RedisResult<$rettype>
 
         {
-            Cmd::$name($($argname),*).query(self)
+            choose_tt!($($fallible,)? (Cmd::$name($($argname),*)?), (Cmd::$name($($argname),*))).query(self)
         }
     };
 }
@@ -169,7 +188,7 @@ macro_rules! implement_commands {
         $(
             $(#[$attr:meta])+
             fn $name:ident<$($tyargs:ident : $ty:ident),*>(
-                $($argname:ident: $argty:ty),*) -> $rettype:tt $body:block
+                $($argname:ident: $argty:ty),*) -> $rettype:tt $($fallible:ident)? $body:block
         )*
     ) =>
     (
@@ -209,7 +228,7 @@ macro_rules! implement_commands {
                 #[allow(clippy::extra_unused_lifetimes, clippy::needless_lifetimes)]
                 fn $name<$lifetime, $($tyargs: $ty, )* RV: FromRedisValue>(
                     &mut self $(, $argname: $argty)*) -> RedisResult<RV>
-                    { Cmd::$name($($argname),*).query(self) }
+                    { choose_tt!($($fallible,)? (Cmd::$name($($argname),*)?), (Cmd::$name($($argname),*))).query(self) }
             )*
 
             implement_iterators! {
@@ -222,8 +241,8 @@ macro_rules! implement_commands {
             $(
                 $(#[$attr])*
                 #[allow(clippy::extra_unused_lifetimes, clippy::needless_lifetimes)]
-                pub fn $name<$lifetime, $($tyargs: $ty),*>($($argname: $argty),*) -> Self {
-                    $body
+                pub fn $name<$lifetime, $($tyargs: $ty),*>($($argname: $argty),*) -> choose_tt!($($fallible,)? (RedisResult<Self>), Self) {
+                    choose_tt!($($fallible,)? (Ok::<_, crate::errors::RedisError>($body)), ($body))
                 }
             )*
         }
@@ -293,7 +312,7 @@ macro_rules! implement_commands {
 
                     {
                         $body
-                    } $rettype
+                    } $rettype $($fallible)?
                 }
             )*
 
@@ -327,7 +346,7 @@ macro_rules! implement_commands {
 
                     {
                         $body
-                    } $rettype
+                    } $rettype $($fallible)?
                 }
             )*
 
@@ -357,8 +376,8 @@ macro_rules! implement_commands {
                 #[allow(clippy::extra_unused_lifetimes, clippy::needless_lifetimes)]
                 pub fn $name<$lifetime, $($tyargs: $ty),*>(
                     &mut self $(, $argname: $argty)*
-                ) -> &mut Self {
-                    self.add_command($body)
+                ) -> choose_tt!($($fallible,)? (RedisResult<&mut Self>), (&mut Self)) {
+                    choose_tt!($($fallible,)? (Ok(self.add_command($body))), (self.add_command($body)))
                 }
             )*
         }
@@ -374,8 +393,8 @@ macro_rules! implement_commands {
                 #[allow(clippy::extra_unused_lifetimes, clippy::needless_lifetimes)]
                 pub fn $name<$lifetime, $($tyargs: $ty),*>(
                     &mut self $(, $argname: $argty)*
-                ) -> &mut Self {
-                    self.add_command($body)
+                ) -> choose_tt!($($fallible,)? (RedisResult<&mut Self>), (&mut Self)) {
+                    choose_tt!($($fallible,)? (Ok(self.add_command($body))), (self.add_command($body)))
                 }
             )*
         }

@@ -10,6 +10,22 @@ redis = "2"
 
 ## Breaking Changes
 
+### JSON commands got promoted to standard commands (Breaking Change)
+
+`JsonCommands`, and `JsonAsyncCommands` got merged into `Commands`, and `JsonAsyncCommands`.
+
+**Migration:** Switch from `JsonCommands` and `JsonAsyncCommands` to `Commands` and `AsyncCommands`
+
+```rust
+// Before:
+use redis::JsonCommands;
+use redis::JsonAsyncCommands;
+
+// After:
+use redis::Commands;
+use redis::AsyncCommands;
+```
+
 ### `RedisServer::new_with_addr_tls_modules_and_spawner` got removed (Breaking Change)
 
 All callers used the spawner function to adjust the command's arguments, then spawn and unwrap it.
