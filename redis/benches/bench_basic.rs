@@ -1,6 +1,7 @@
 use criterion::{Bencher, Criterion, Throughput, criterion_group, criterion_main};
 use futures::{prelude::*, stream};
 use redis::{RedisError, Value};
+use redis_test::test_context::TestContext;
 
 use support::*;
 

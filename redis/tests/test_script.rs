@@ -5,7 +5,7 @@ mod support;
 mod script {
     use redis::ServerErrorKind;
 
-    use crate::support::*;
+    use redis_test::test_context::TestContext;
 
     #[test]
     fn test_script() {

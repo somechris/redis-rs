@@ -35,6 +35,9 @@ pub mod cluster;
 pub mod sentinel;
 pub mod server;
 pub mod utils;
+#[macro_use]
+pub mod version;
+pub mod test_context;
 
 use std::collections::{HashMap, HashSet, VecDeque};
 use std::sync::{Arc, Mutex};

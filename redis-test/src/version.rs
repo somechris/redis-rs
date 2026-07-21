@@ -307,7 +307,7 @@ pub trait TestContextVersioning {
 macro_rules! skip_if_context_does_not_support {
     ($ctx:expr, $component:expr) => {{ $crate::skip_if_context_does_not_support!($ctx, $component, ()) }};
     ($ctx:expr, $component:expr, $ret:expr) => {{
-        if !$ctx.supports($component) {
+        if !redis_test::version::TestContextVersioning::supports(&$ctx, $component) {
             eprintln!(
                 "Skipping the test because the running server does not support {:?}.",
                 $component
@@ -336,11 +336,13 @@ macro_rules! skip_if_context_does_not_support {
 /// ```ignore
 /// let ctx = run_test_if_version_supported!(REDIS_CE_8_0, &[Module::Search]);
 /// ```
+///
+/// [`TestContext`]: super::test_context::TestContext
 #[macro_export]
 macro_rules! run_test_if_version_supported {
     ($component:expr) => {{ run_test_if_version_supported!($component, &[]) }};
     ($component:expr, $modules:expr) => {{
-        let ctx = $crate::support::TestContextBuilder::default()
+        let ctx = redis_test::test_context::TestContextBuilder::default()
             .modules($modules)
             .build();
 

@@ -29,9 +29,13 @@ mod basic {
         EmbeddingInput, VAddOptions, VEmbOptions, VSimOptions, VectorAddInput, VectorQuantization,
         VectorSimilaritySearchInput,
     };
-    use redis_test::redis_value;
     use redis_test::server::redis_settings;
+    use redis_test::test_context::TestContext;
     use redis_test::utils::get_listener_on_free_port;
+    use redis_test::version::*;
+    use redis_test::{
+        redis_value, run_test_if_version_supported, skip_if_context_does_not_support,
+    };
 
     use assert_matches::assert_matches;
     #[cfg(feature = "vector-sets")]

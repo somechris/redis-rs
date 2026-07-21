@@ -4,9 +4,8 @@
 //! `support` module itself would include (and compile and run) them for each integration test
 //! module. This is unwarranted. So we instead collect them in this module.
 
-use crate::support::{
-    AvailableComponents, Component, REDIS_CE_6_0, TestContext, TestContextVersioning,
-};
+use redis_test::test_context::TestContext;
+use redis_test::version::{AvailableComponents, Component, REDIS_CE_6_0, TestContextVersioning};
 use redis_test::{MockCmd, MockRedisConnection};
 
 mod support;
