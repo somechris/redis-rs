@@ -22,10 +22,3 @@ rand = "0.10"
 
 [features]
 aio = ["futures", "redis/aio"]
-
-[dev-dependencies]
-redis = { version = "2.0.0-rc.1", path = "../redis", features = [
-    "aio",
-    "tokio-comp",
-] }
-tokio = { workspace = true }
