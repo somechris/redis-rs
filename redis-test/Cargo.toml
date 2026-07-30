@@ -22,3 +22,6 @@ rand = "0.10"
 
 [features]
 aio = ["futures", "redis/aio"]
+
+[dev-dependencies]
+tokio = { workspace = true }
