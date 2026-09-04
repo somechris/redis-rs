@@ -10,6 +10,22 @@ redis = "2"
 
 ## Breaking Changes
 
+### JSON commands got promoted to standard commands (Breaking Change)
+
+`JsonCommands`, and `JsonAsyncCommands` got merged into `Commands`, and `JsonAsyncCommands`.
+
+**Migration:** Switch from `JsonCommands` and `JsonAsyncCommands` to `Commands` and `AsyncCommands`
+
+```rust
+// Before:
+use redis::JsonCommands;
+use redis::JsonAsyncCommands;
+
+// After:
+use redis::Commands;
+use redis::AsyncCommands;
+```
+
 ### Tests: The path to the JSON module is no longer picked up from `REDIS_RS...`
 
 The path to the JSON module is now only picked up from the environment variable `REDISRS_REDIS_JSON_PATH` (no `_` before `RS`).
