@@ -238,7 +238,7 @@ macro_rules! implement_commands {
         impl Cmd {
             $(
                 $(#[$attr])*
-                #[inline]
+                #[inline(always)]
                 #[allow(clippy::extra_unused_lifetimes, clippy::needless_lifetimes)]
                 pub fn $name<$lifetime, $($tyargs: $ty),*>($($argname: $argty),*) -> Self {
                     $($body)*
