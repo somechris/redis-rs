@@ -186,7 +186,7 @@ macro_rules! implement_commands {
         $(
             $(#[$attr:meta])+
             fn $name:ident<$($tyargs:ident : $ty:ident),*>(
-                $($argname:ident: $argty:ty),*) -> $rettype:tt { $($body:tt)* }
+                $($argname:ident: $argty:ty),*) -> $rettype:tt $body:block
         )*
     ) =>
     (
@@ -241,7 +241,7 @@ macro_rules! implement_commands {
                 #[inline]
                 #[allow(clippy::extra_unused_lifetimes, clippy::needless_lifetimes)]
                 pub fn $name<$lifetime, $($tyargs: $ty),*>($($argname: $argty),*) -> Self {
-                    $($body)*
+                    $body
                 }
             )*
         }
