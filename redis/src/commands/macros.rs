@@ -1,27 +1,70 @@
 // Generate implementation for function skeleton, we use this for `AsyncTypedCommands` because we want to be able to handle having a return type specified or unspecified with a fallback
+
+/// Strips the outer wrapping `RedisResult`, if it's present
+macro_rules! strip_redisresult {
+    ((RedisResult<$type:ty>)) => {
+        $type
+    };
+    ($type:tt) => {
+        $type
+    };
+}
+
+/// Choose an item depending on whether the first argument is `RedisResult`
+///
+/// # Arguments
+///
+/// * The first argument acts as selector. If it's a `RedisResult`, yield `$redis_result`, otherwise
+///   `$other`.
+/// * `$redis_result` - The `tt` to yield if the first argument is a `RedisResult`.
+/// * `$other` - The `tt` to yield if the first argument is not a `RedisResult`.
+macro_rules! choose_if_redisresult {
+    ((RedisResult<$unused:ty>), $redis_result:tt, $other:tt) => {
+        $redis_result
+    };
+    ($other_type:ty, $redis_result:tt, $other:tt) => {
+        $other
+    };
+}
+
 #[cfg(feature = "aio")]
 macro_rules! implement_command_async {
-    // If the return type is `Generic`, then we require the user to specify the return type
+    // Expand the `Generic` return type to `RV`
     (
         $lifetime: lifetime
         $(#[$attr:meta])+
         fn $name:ident<$($tyargs:ident : $ty:ident),*>(
-            $($argname:ident: $argty:ty),*) { $($body:tt)* } Generic
+            $($argname:ident: $argty:ty),*) -> Generic
     ) => {
         implement_command_async!(
             $lifetime
             $(#[$attr])+
             fn $name<$($tyargs : $ty,)* RV: FromRedisValue>(
-                $($argname: $argty),*) { $($body)* } RV
+                $($argname: $argty),*) -> RV
         );
     };
 
-    // If return type is specified in the input skeleton, then we will return it in the generated function (note match rule `$rettype:ty`)
+    // Expand the `RedisResult<Generic>` return type to `RedisResult<RV>`
     (
         $lifetime: lifetime
         $(#[$attr:meta])+
         fn $name:ident<$($tyargs:ident : $ty:ident),*>(
-            $($argname:ident: $argty:ty),*) { $($body:tt)* } $rettype:ty
+            $($argname:ident: $argty:ty),*) -> (RedisResult<Generic>)
+    ) => {
+        implement_command_async!(
+            $lifetime
+            $(#[$attr])+
+            fn $name<$($tyargs : $ty,)* RV: FromRedisValue>(
+                $($argname: $argty),*) -> (RedisResult<RV>)
+        );
+    };
+
+    // Actual implementation of the command
+    (
+        $lifetime: lifetime
+        $(#[$attr:meta])+
+        fn $name:ident<$($tyargs:ident : $ty:ident),*>(
+            $($argname:ident: $argty:ty),*) -> $rettype:tt
     ) => {
         $(#[$attr])*
         #[inline]
@@ -29,36 +72,55 @@ macro_rules! implement_command_async {
         fn $name<$lifetime, $($tyargs: $ty + Send + Sync + $lifetime,)*>(
             & $lifetime mut self
             $(, $argname: $argty)*
-        ) -> crate::types::RedisFuture<$lifetime, $rettype>
+        ) -> crate::types::RedisFuture<$lifetime, strip_redisresult!($rettype)>
 
         {
-            Box::pin(async move { $($body)*.query_async(self).await })
+            Box::pin(async move {
+                choose_if_redisresult!($rettype, (Cmd::$name($($argname),*)?), (Cmd::$name($($argname),*)))
+                    .query_async(self)
+                    .await
+            })
         }
     };
 }
 
 macro_rules! implement_command_sync {
-    // If the return type is `Generic`, then we require the user to specify the return type
+    // Expand the `Generic` return type to `RV`
     (
         $lifetime: lifetime
         $(#[$attr:meta])+
         fn $name:ident<$($tyargs:ident : $ty:ident),*>(
-            $($argname:ident: $argty:ty),*) { $($body:tt)* } Generic
+            $($argname:ident: $argty:ty),*) -> Generic
     ) => {
         implement_command_sync!(
             $lifetime
             $(#[$attr])+
             fn $name<$($tyargs : $ty,)* RV: FromRedisValue>(
-                $($argname: $argty),*) { $($body)* } RV
+                $($argname: $argty),*) -> RV
         );
     };
 
-    // If return type is specified in the input skeleton, then we will return it in the generated function (note match rule `$rettype:ty`)
+    // Expand the `Generic` return type to `RedisResult<RV>`
     (
         $lifetime: lifetime
         $(#[$attr:meta])+
         fn $name:ident<$($tyargs:ident : $ty:ident),*>(
-            $($argname:ident: $argty:ty),*) { $($body:tt)* } $rettype:ty
+            $($argname:ident: $argty:ty),*) -> (RedisResult<Generic>)
+    ) => {
+        implement_command_sync!(
+            $lifetime
+            $(#[$attr])+
+            fn $name<$($tyargs : $ty,)* RV: FromRedisValue>(
+                $($argname: $argty),*) -> (RedisResult<RV>)
+        );
+    };
+
+    // Actual implementation of the command
+    (
+        $lifetime: lifetime
+        $(#[$attr:meta])+
+        fn $name:ident<$($tyargs:ident : $ty:ident),*>(
+            $($argname:ident: $argty:ty),*) -> $rettype:tt
     ) => {
         $(#[$attr])*
         #[inline]
@@ -66,10 +128,10 @@ macro_rules! implement_command_sync {
         fn $name<$lifetime, $($tyargs: $ty + Send + Sync + $lifetime,)*>(
             & $lifetime mut self
             $(, $argname: $argty)*
-        ) -> RedisResult<$rettype>
+        ) -> RedisResult<strip_redisresult!($rettype)>
 
         {
-            Cmd::$name($($argname),*).query(self)
+            choose_if_redisresult!($rettype, (Cmd::$name($($argname),*)?), (Cmd::$name($($argname),*))).query(self)
         }
     };
 }
@@ -88,29 +150,6 @@ macro_rules! ready_cmd {
         cmd.arg(name);
         $(cmd.arg($arg);)*
         cmd
-    }};
-}
-
-macro_rules! write_pipeline_command {
-    ($self:expr, { ready_cmd!($name:expr $(, $arg:expr)*).take() }) => {{
-        let name = $name;
-        let args_count = 1usize;
-        let args_size = name.len();
-        $(
-            let (next_args_count, next_args_size) = $arg.num_of_args_and_size();
-            let args_count = args_count + next_args_count;
-            let args_size = args_size + next_args_size;
-        )*
-        $self.reserve_for_args(args_count)
-          .reserve_for_data(args_size);
-        $self.start_command();
-        $crate::types::RedisWrite::write_arg($self, name.as_bytes());
-        $($self.arg($arg);)*
-        $self
-    }};
-
-    ($self:expr, $cmd:expr) => {{
-        $self.add_command($cmd)
     }};
 }
 
@@ -209,7 +248,7 @@ macro_rules! implement_commands {
         $(
             $(#[$attr:meta])+
             fn $name:ident<$($tyargs:ident : $ty:ident),*>(
-                $($argname:ident: $argty:ty),*) -> $rettype:tt { $($body:tt)* }
+                $($argname:ident: $argty:ty),*) -> $rettype:tt $body:block
         )*
     ) =>
     (
@@ -249,7 +288,7 @@ macro_rules! implement_commands {
                 #[allow(clippy::extra_unused_lifetimes, clippy::needless_lifetimes)]
                 fn $name<$lifetime, $($tyargs: $ty, )* RV: FromRedisValue>(
                     &mut self $(, $argname: $argty)*) -> RedisResult<RV>
-                    { Cmd::$name($($argname),*).query(self) }
+                    { choose_if_redisresult!($rettype, (Cmd::$name($($argname),*)?), (Cmd::$name($($argname),*))).query(self) }
             )*
 
             implement_iterators! {
@@ -261,9 +300,10 @@ macro_rules! implement_commands {
         impl Cmd {
             $(
                 $(#[$attr])*
+                #[inline]
                 #[allow(clippy::extra_unused_lifetimes, clippy::needless_lifetimes)]
-                pub fn $name<$lifetime, $($tyargs: $ty),*>($($argname: $argty),*) -> Self {
-                    $($body)*
+                pub fn $name<$lifetime, $($tyargs: $ty),*>($($argname: $argty),*) -> choose_if_redisresult!($rettype, (RedisResult<Self>), Self) {
+                    choose_if_redisresult!($rettype, (Ok($body)), ($body))
                 }
             )*
         }
@@ -310,7 +350,11 @@ macro_rules! implement_commands {
                 where
                     RV: FromRedisValue,
                 {
-                    Box::pin(async move { {$($body)*}.query_async(self).await })
+                    Box::pin(async move {
+                        choose_if_redisresult!($rettype, (Cmd::$name($($argname),*)?), (Cmd::$name($($argname),*)))
+                            .query_async(self)
+                            .await
+                    })
                 }
             )*
 
@@ -329,11 +373,7 @@ macro_rules! implement_commands {
                     $(#[$attr])*
                     fn $name<$($tyargs: $ty),*>(
                         $($argname: $argty),*
-                    )
-
-                    {
-                        $($body)*
-                    } $rettype
+                    ) -> $rettype
                 }
             )*
 
@@ -363,11 +403,7 @@ macro_rules! implement_commands {
                     $(#[$attr])*
                     fn $name<$($tyargs: $ty),*>(
                         $($argname: $argty),*
-                    )
-
-                    {
-                        $($body)*
-                    } $rettype
+                    ) -> $rettype
                 }
             )*
 
@@ -397,8 +433,8 @@ macro_rules! implement_commands {
                 #[allow(clippy::extra_unused_lifetimes, clippy::needless_lifetimes)]
                 pub fn $name<$lifetime, $($tyargs: $ty),*>(
                     &mut self $(, $argname: $argty)*
-                ) -> &mut Self {
-                    write_pipeline_command!(self,{ $($body)* })
+                ) -> choose_if_redisresult!($rettype, (RedisResult<&mut Self>), (&mut Self)) {
+                    choose_if_redisresult!($rettype, (Ok(self.add_command(Cmd::$name($($argname),*)?))), (self.add_command(Cmd::$name($($argname),*))))
                 }
             )*
         }
@@ -414,8 +450,8 @@ macro_rules! implement_commands {
                 #[allow(clippy::extra_unused_lifetimes, clippy::needless_lifetimes)]
                 pub fn $name<$lifetime, $($tyargs: $ty),*>(
                     &mut self $(, $argname: $argty)*
-                ) -> &mut Self {
-                    write_pipeline_command!(self,{ $($body)* })
+                ) -> choose_if_redisresult!($rettype, (RedisResult<&mut Self>), (&mut Self)) {
+                    choose_if_redisresult!($rettype, (Ok(self.add_command(Cmd::$name($($argname),*)?))), (self.add_command(Cmd::$name($($argname),*))))
                 }
             )*
         }
