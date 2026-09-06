@@ -2,8 +2,7 @@
 use sha1_smol::Sha1;
 
 use crate::{
-    Cmd, ErrorKind,
-    cmd::cmd,
+    Cmd, ErrorKind, RedisWrite,
     connection::ConnectionLike,
     types::{FromRedisValue, RedisResult, ToRedisArgs},
 };
@@ -46,17 +45,10 @@ impl Script {
         &self.hash
     }
 
-    /// Returns a command to load the script.
-    pub(crate) fn load_cmd(&self) -> Cmd {
-        let mut cmd = cmd("SCRIPT");
-        cmd.arg("LOAD").arg(self.code.as_bytes());
-        cmd
-    }
-
     /// Loads the script and returns the SHA1 of it.
     #[inline]
     pub fn load(&self, con: &mut dyn ConnectionLike) -> RedisResult<String> {
-        let hash: String = self.load_cmd().query(con)?;
+        let hash: String = Cmd::load_script(self).query(con)?;
 
         debug_assert_eq!(hash, self.hash);
 
@@ -70,7 +62,7 @@ impl Script {
     where
         C: crate::aio::ConnectionLike,
     {
-        let hash: String = self.load_cmd().query_async(con).await?;
+        let hash: String = Cmd::load_script(self).query_async(con).await?;
 
         debug_assert_eq!(hash, self.hash);
 
@@ -135,6 +127,15 @@ impl Script {
         }
         .invoke_async(con)
         .await
+    }
+}
+
+impl ToRedisArgs for Script {
+    fn write_redis_args<W>(&self, out: &mut W)
+    where
+        W: ?Sized + RedisWrite,
+    {
+        out.write_arg(self.code.as_bytes());
     }
 }
 
