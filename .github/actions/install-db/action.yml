@@ -25,7 +25,7 @@ runs:
           ~/redis-cli
           ~/redis-server
           ~/db
-        key: ${{ runner.os }}-${{ inputs.db-name }}-${{ inputs.db-version }}
+        key: ${{ runner.os }}-${{ inputs.db-name }}-${{ inputs.db-version }}-2026-09-18
 
     - name: Build and Install DB
       if: steps.cache-redis.outputs.cache-hit != 'true'
@@ -63,6 +63,7 @@ runs:
         #   On 2026-06-01, `ubuntu-latest` is ubuntu 24.04, which uses
         #   `clang` 18, but `rustc`'s `clang` is 21. So LTO builds would fail
         #   and we keep LTO disabled (as before).
+        nproc
         BUILD_TLS=yes BUILD_WITH_MODULES=yes LTO=0 make --jobs="$(nproc)"
 
         # Copy the built executables out
