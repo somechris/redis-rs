@@ -160,6 +160,11 @@ jobs:
             /tmp/valkey-bloom/target/release/libvalkey_bloom.so
           key: v2${{ runner.os }}-valkey-bloom-${{ matrix.config.bloom-module-version }}
 
+      - name: Echo vars
+        run: |
+          echo 1 ${{steps.cache-valkey-bloom.output.cache-hit}} Z
+          echo 2 ${{steps.cache-valkey-bloom.cache-hit}} Z
+
       - name: Build Valkey Bloom repo
         if: startsWith(matrix.config.bloom-module-version, 'valkey-bloom:') && steps.cache-valkey-bloom.output.cache-hit != 'true'
         env:
