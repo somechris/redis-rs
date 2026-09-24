@@ -158,7 +158,7 @@ jobs:
         with:
           path: |
             /tmp/valkey-bloom/target/release/libvalkey_bloom.so
-          key: ${{ runner.os }}-valkey-bloom-${{ matrix.config.bloom-module-version }}
+          key: v2${{ runner.os }}-valkey-bloom-${{ matrix.config.bloom-module-version }}
 
       - name: Build Valkey Bloom repo
         if: startsWith(matrix.config.bloom-module-version, 'valkey-bloom:') && steps.cache-valkey-bloom.output.cache-hit != 'true'
@@ -219,7 +219,7 @@ jobs:
         with:
           path: |
             /tmp/valkey-bloom/target/release/libvalkey_bloom.so
-          key: ${{ runner.os }}-valkey-bloom-${{ matrix.config.bloom-module-version }}
+          key: v2${{ runner.os }}-valkey-bloom-${{ matrix.config.bloom-module-version }}
 
       - name: Copy Valkey Bloom into place
         if: startsWith(matrix.config.bloom-module-version, 'valkey-bloom:')
