@@ -17,7 +17,7 @@ concurrency:
 
 jobs:
   build-and-test:
-    needs: lint
+    needs: []
     runs-on: ubuntu-latest
     timeout-minutes: 60
     strategy:
@@ -198,7 +198,7 @@ jobs:
           key: ${{ runner.os }}-redisjson-${{ matrix.config.json-module-version }}
 
   examples:
-    needs: [lint, build-and-test]
+    needs: [build-and-test]
     if: ${{ github.event_name == 'pull_request' }}
     runs-on: ubuntu-latest
     strategy:
