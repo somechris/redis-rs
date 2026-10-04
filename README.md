@@ -1,8 +1,10 @@
 # redis-rs
-
-[![Rust](https://github.com/redis-rs/redis-rs/actions/workflows/rust.yml/badge.svg)](https://github.com/redis-rs/redis-rs/actions/workflows/rust.yml)
-[![crates.io](https://img.shields.io/crates/v/redis.svg)](https://crates.io/crates/redis)
-[![Chat](https://img.shields.io/discord/976380008299917365?logo=discord)](https://discord.gg/WHKcJK9AKP)
+x
+x
+x
+x[![Rust](https://github.com/redis-rs/redis-rs/actions/workflows/rust.yml/badge.svg)](https://github.com/redis-rs/redis-rs/actions/workflows/rust.yml)
+x[![crates.io](https://img.shields.io/crates/v/redis.svg)](https://crates.io/crates/redis)
+x[![Chat](https://img.shields.io/discord/976380008299917365?logo=discord)](https://discord.gg/WHKcJK9AKP)
 
 Redis-rs is a Rust library implementing a high-level client for Redis, Valkey
 and any other RESP (Redis Serialization Protocol) compliant DB server. It
