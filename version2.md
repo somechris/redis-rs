@@ -10,6 +10,12 @@ redis = "2"
 
 ## Breaking Changes
 
+### `RedisServer` sets a working directory for started servers (Breaking Change)
+
+To avoid accidentally littering files, `RedisServer` now sets the commands
+`current_dir` as working directory. If that is missing, it defaults to the
+server's temporary directory.
+
 ### `RedisServer` had the `log_file` function removed (Breaking Change)
 
 The `log_file` function required to pass a `tempfile`, which was impractical.

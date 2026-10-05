@@ -336,6 +336,14 @@ impl RedisServer {
             redis_cmd.arg2("--enable-debug-command", "yes");
         }
 
+        // Set the server's working directory to the directory set on the command, or otherwise to
+        // the tempdir. That way, we do not litter files accidentally.
+        let working_dir = redis_cmd
+            .get_current_dir()
+            .unwrap_or_else(|| tempdir.path())
+            .to_owned();
+        redis_cmd.arg2("--dir", &working_dir);
+
         // Disable all default listening
         redis_cmd.arg2("--port", "0");
 
@@ -561,6 +569,11 @@ impl RedisServerCommand {
     pub fn current_dir<P: AsRef<Path>>(&mut self, dir: P) -> &mut Self {
         self.cmd.current_dir(dir);
         self
+    }
+
+    /// Gets the directory the command is set to run in
+    pub(crate) fn get_current_dir(&mut self) -> Option<&Path> {
+        self.cmd.get_current_dir()
     }
 
     /// Runs the command
