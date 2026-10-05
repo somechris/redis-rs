@@ -232,6 +232,12 @@ let opts1 = ScanOptions::default().with_type(ValueType::JSON); // Use `ValueType
 let opts2 = ScanOptions::default().with_type("your-custom-type".into()); // Convert to `ValueType`
 ```
 
+### `RedisServer` sets a working directory for started servers (Breaking Change)
+
+To avoid accidentally littering files, `RedisServer` now sets the commands
+`current_dir` as working directory. If that is missing, it defaults to the
+server's temporary directory.
+
 ### `RedisServer` had the `log_file` function removed (Breaking Change)
 
 The `log_file` function required to pass a `tempfile`, which was impractical.
