@@ -655,9 +655,9 @@ pub use crate::cmd::CommandCacheConfig;
 pub use crate::cmd::{Arg, Cmd, Iter, cmd, pack_command, pipe};
 pub use crate::commands::{
     Aggregate, Commands, ControlFlow, CopyOptions, Direction, FlushAllOptions, FlushDbOptions,
-    HashFieldExpirationOptions, HotkeysCommands, IncrexOptions, LposOptions, MSetOptions,
-    PubSubCommands, ScanOptions, SetOptions, SortedSetAddOptions, SortedSetOperationOptions,
-    TypedCommands, UpdateCheck,
+    HashFieldExpirationOptions, HotkeysCommands, IncrexOptions, InfoOptions, LposOptions,
+    MSetOptions, PubSubCommands, ScanOptions, SetOptions, SortedSetAddOptions,
+    SortedSetOperationOptions, TypedCommands, UpdateCheck,
     hotkeys::{
         HOTKEYS_COUNT_MAX, HOTKEYS_COUNT_MIN, HotKeyEntry, HotkeysOptions, HotkeysResponse,
         SlotRange,

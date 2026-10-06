@@ -7,7 +7,7 @@ use crate::pipeline::Pipeline;
 use crate::search::{CreateOptions, SearchSchema};
 use crate::types::{
     ExistenceCheck, ExpireOption, Expiry, FieldExistenceCheck, FromRedisValue, IncrexResult,
-    IntegerReplyOrNoOp, NumericBehavior, RedisResult, RedisWrite, SetExpiry, ToRedisArgs,
+    InfoDict, IntegerReplyOrNoOp, NumericBehavior, RedisResult, RedisWrite, SetExpiry, ToRedisArgs,
     ToSingleRedisArg, ValueComparison, ValueType,
 };
 
@@ -960,6 +960,16 @@ implement_commands! {
     /// [Redis Docs](https://redis.io/commands/PING)
     fn ping_message<K: ToSingleRedisArg>(message: K) -> (String) {
          ready_cmd!("PING", message).take()
+    }
+
+    /// Gets the server's information
+    fn info<>() -> InfoDict {
+        ready_cmd!("INFO")
+    }
+
+    /// Gets the server's information
+    fn info_options<>(options: &InfoOptions) -> InfoDict {
+        ready_cmd!("INFO", options)
     }
 
     /// Removes and returns the up to `count` last elements of the list stored at key
@@ -4468,3 +4478,38 @@ impl AsyncHotkeysCommands for crate::aio::MultiplexedConnection {}
 
 #[cfg(all(feature = "aio", feature = "connection-manager"))]
 impl AsyncHotkeysCommands for crate::aio::ConnectionManager {}
+
+/// Options for the `INFO` command
+#[derive(Clone, Debug, Default)]
+pub struct InfoOptions {
+    sections: Vec<String>,
+}
+
+impl InfoOptions {
+    /// Builds a new instance
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Adds a section to query
+    pub fn section<T: ToString>(mut self, section: T) -> Self {
+        self.sections.push(section.to_string());
+        self
+    }
+
+    /// Adds sections to query
+    pub fn sections<T: ToString>(mut self, sections: &[T]) -> Self {
+        self.sections
+            .extend(sections.iter().map(|section| section.to_string()));
+        self
+    }
+}
+
+impl ToRedisArgs for InfoOptions {
+    fn write_redis_args<W>(&self, out: &mut W)
+    where
+        W: ?Sized + RedisWrite,
+    {
+        self.sections.write_redis_args(out);
+    }
+}
