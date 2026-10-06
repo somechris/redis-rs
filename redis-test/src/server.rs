@@ -4,6 +4,7 @@ use std::fmt::{Debug, Formatter};
 use std::io::Write;
 use std::path::Path;
 use std::{env, fs, path::PathBuf, process};
+use tempfile::TempDir;
 
 use crate::utils::{
     CommandMultiArgs, TlsFilePaths, build_keys_and_certs_for_tls, get_random_available_port,
@@ -83,6 +84,8 @@ pub struct RedisServerBuilder {
     modules: Vec<Module>,
     mtls: bool,
     tls_paths: Option<TlsFilePaths>,
+    /// The temporary directory for the
+    tempdir: Option<TempDir>,
     /// If the built instance is dropped while panicking, dump the server info to this output
     ///
     /// This is `None` by default to avoid noisy output. But it's useful when developing server
@@ -144,6 +147,11 @@ impl RedisServerBuilder {
 
     pub fn tls_paths_opt(mut self, opt_tls_paths: Option<TlsFilePaths>) -> Self {
         self.tls_paths = opt_tls_paths;
+        self
+    }
+
+    pub fn tempdir(mut self, tempdir: TempDir) -> Self {
+        self.tempdir = Some(tempdir);
         self
     }
 
@@ -214,12 +222,12 @@ pub struct RedisServer {
     ///
     /// This is only used for debugging purposes
     pub command: RedisServerCommand,
-    pub tempdir: tempfile::TempDir,
 
     /// The log file used by the server
     ///
     /// The [`log_file_contents`](Self::log_file_contents) helper function gives the file's
     /// contents.
+    pub tempdir: tempfile::TempDir,
     pub log_file: PathBuf,
     pub addr: redis::ConnectionAddr,
     pub tls_paths: Option<TlsFilePaths>,
@@ -325,10 +333,12 @@ impl RedisServer {
 
         redis_cmd.load_modules(&builder.modules);
 
-        let tempdir = tempfile::Builder::new()
-            .prefix("redis")
-            .tempdir()
-            .expect("failed to create tempdir");
+        let tempdir = builder.tempdir.unwrap_or_else(|| {
+            tempfile::Builder::new()
+                .prefix("redis")
+                .tempdir()
+                .expect("failed to create tempdir")
+        });
         let log_file = tempfile::Builder::new()
             .prefix("server-")
             .suffix(".log")

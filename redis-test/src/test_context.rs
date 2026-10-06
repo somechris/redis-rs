@@ -9,6 +9,7 @@ use redis::{ConnectionAddr, ErrorKind, ProtocolVersion, ServerErrorKind, TypedCo
 use std::path::PathBuf;
 use std::thread::sleep;
 use std::time::Duration;
+use tempfile::TempDir;
 
 /// A builder for [`TestContext`]
 ///
@@ -89,6 +90,11 @@ impl TestContextBuilder {
 
     pub fn tls_paths_opt(mut self, opt_tls_paths: Option<TlsFilePaths>) -> Self {
         self.server_builder = self.server_builder.tls_paths_opt(opt_tls_paths);
+        self
+    }
+
+    pub fn tempdir(mut self, tempdir: TempDir) -> Self {
+        self.server_builder = self.server_builder.tempdir(tempdir);
         self
     }
 
