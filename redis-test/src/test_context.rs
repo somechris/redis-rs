@@ -6,7 +6,8 @@ use crate::version::{AvailableComponents, TestContextVersioning};
 #[cfg(feature = "aio")]
 use redis::RedisResult;
 use redis::{
-    Client, Connection, ConnectionAddr, ErrorKind, ProtocolVersion, ServerErrorKind, TypedCommands,
+    Client, Connection, ConnectionAddr, ErrorKind, InfoOptions, ProtocolVersion, ServerErrorKind,
+    TypedCommands,
 };
 use std::path::PathBuf;
 use std::thread::sleep;
@@ -266,14 +267,24 @@ impl TestContext {
     fn wait_until_ready(server: &mut RedisServer, mut con: Connection) {
         let backoff = Duration::from_millis(BACKOFF_MS);
         let loading_ts = Instant::now();
+        let info_options = InfoOptions::default().section("persistence");
         loop {
-            let err = match con.flushdb() {
-                Ok(_) => return,
+            let maybe_err = match con.info_options(&info_options) {
+                Ok(infos) => {
+                    // Check the loading markers (assuming "done", if they are missing)
+                    if infos.get("loading") != Some(true)
+                        && infos.get("async_loading") != Some(true)
+                    {
+                        // All loading done
+                        return;
+                    }
+                    None
+                }
                 Err(err) => {
                     if !matches!(err.kind(), ErrorKind::Server(ServerErrorKind::BusyLoading)) {
                         panic_w_server_log_dump!(server, "Failed to flush database: {err}");
                     }
-                    err
+                    Some(err)
                 }
             };
 
@@ -282,9 +293,13 @@ impl TestContext {
             // Check if there is time left to retry
             let waited_ms = Instant::now().duration_since(loading_ts).as_millis();
             if waited_ms > MAX_LOADING_DURATION_MS {
+                let error_msg: String = match maybe_err {
+                    Some(err) => format!(" Last error: {err}"),
+                    None => String::new(),
+                };
                 panic_w_server_log_dump!(
                     server,
-                    "still loading after {waited_ms} ms. Aborting. Last error: {err}"
+                    "still no connection after {waited_ms} ms. Aborting.{error_msg}"
                 );
             }
 
