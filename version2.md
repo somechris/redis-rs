@@ -10,6 +10,12 @@ redis = "2"
 
 ## Breaking Changes
 
+### `RedisServer` had the `log_file` function removed (Breaking Change)
+
+The `log_file` function required to pass a `tempfile`, which was impractical.
+
+Use `log_file_contents` function to directly get the contents of the log file, or if you need the file name, directly use the `log_file` field instead.
+
 ### `ValueType::BloomFilterValKey` (upper-case `K` in `Key`) was renamed to `ValueType::BloomFilterValkey` (lower-case `k`) (Breaking Change)
 
 `Valkey` is spelled with lower-case `k`, so we adjust it's use in code accordingly.

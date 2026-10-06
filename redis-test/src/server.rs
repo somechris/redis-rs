@@ -4,7 +4,6 @@ use std::fmt::{Debug, Formatter};
 use std::io::Write;
 use std::path::Path;
 use std::{env, fs, path::PathBuf, process};
-use tempfile::TempDir;
 
 use crate::utils::{
     CommandMultiArgs, TlsFilePaths, build_keys_and_certs_for_tls, get_random_available_port,
@@ -324,7 +323,7 @@ impl RedisServer {
             .prefix("redis")
             .tempdir()
             .expect("failed to create tempdir");
-        let log_file = Self::log_file(&tempdir);
+        let log_file = tempdir.path().join("redis.log");
         redis_cmd.arg2("--logfile", log_file.clone());
         if get_major_version() > 6 {
             redis_cmd.arg2("--enable-debug-command", "yes");
@@ -506,10 +505,6 @@ impl RedisServer {
     /// process information (exit code, ...), which is useful to build error messages.
     pub fn stop_with_info(&mut self) -> String {
         self.stop_internal(true)
-    }
-
-    pub fn log_file(tempdir: &TempDir) -> PathBuf {
-        tempdir.path().join("redis.log")
     }
 
     /// Check if the server is still running
