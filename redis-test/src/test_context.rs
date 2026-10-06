@@ -5,11 +5,25 @@ use crate::utils::{TlsFilePaths, build_single_client};
 use crate::version::{AvailableComponents, TestContextVersioning};
 #[cfg(feature = "aio")]
 use redis::RedisResult;
-use redis::{ConnectionAddr, ErrorKind, ProtocolVersion, ServerErrorKind, TypedCommands};
+use redis::{
+    Client, Connection, ConnectionAddr, ErrorKind, ProtocolVersion, ServerErrorKind, TypedCommands,
+};
 use std::path::PathBuf;
 use std::thread::sleep;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 use tempfile::TempDir;
+
+/// The duration in milliseconds to wait to let the server accept connections
+const MAX_INITIAL_CONNECTION_DURATION_MS: u128 = 2500; // 2.5 seconds for initial connection
+
+/// The duration in milliseconds to wait to let the server load data
+const MAX_LOADING_DURATION_MS: u128 = 2500; // 2.5 seconds for loading database content
+
+/// The backoff time in milliseconds between checks if the server is ready
+///
+/// This is short to ensure responsive tests, but not 0 to assure we're not starving the server
+/// startup on hosts with only few CPUs.
+const BACKOFF_MS: u64 = 1; // 1 ms
 
 /// A builder for [`TestContext`]
 ///
@@ -186,71 +200,96 @@ impl TestContext {
             crate::utils::start_tls_crypto_provider();
         }
 
-        let mut con;
+        // Give the server some time to come up
+        let con = Self::get_initial_connection(&mut server, &client);
+        Self::wait_until_ready(&mut server, con);
 
-        let millisecond = Duration::from_millis(1);
-        let mut retries = 0;
-        loop {
-            match client.get_connection() {
-                Err(err) => {
-                    if err.is_connection_refusal() {
-                        // Check if the server is still alive
-                        if !server.is_alive() {
-                            panic_w_server_log_dump!(
-                                server,
-                                "Server exited before we could connect"
-                            );
-                        }
-
-                        // Wait and retry
-                        sleep(millisecond);
-                        retries += 1;
-                        if retries > 100000 {
-                            panic_w_server_log_dump!(
-                                server,
-                                "Tried to connect too many times, last error: {err}"
-                            );
-                        }
-                    } else {
-                        panic_w_server_log_dump!(server, "Could not connect: {err}");
-                    }
-                }
-                Ok(x) => {
-                    con = x;
-                    break;
-                }
-            }
-        }
-
-        // Redis may still be loading its dataset after accepting connections,
-        // especially with TLS where the handshake completes before Redis is fully ready.
-        // Retry flushdb if the BusyLoading error is returned to allow time for initialization.
-        let mut flush_retries = 0;
-        loop {
-            match con.flushdb() {
-                Ok(_) => break,
-                Err(err)
-                    if matches!(err.kind(), ErrorKind::Server(ServerErrorKind::BusyLoading)) =>
-                {
-                    sleep(millisecond);
-                    flush_retries += 1;
-                    if flush_retries > 10000 {
-                        panic_w_server_log_dump!(
-                            server,
-                            "Redis is still loading after too many retries, last error: {err}"
-                        );
-                    }
-                }
-                Err(err) => {
-                    panic_w_server_log_dump!(server, "Failed to flush database: {err}");
-                }
-            }
-        }
-
+        // Here the server is up and usable. Done :-)
         Self {
             server,
             client,
             protocol,
+        }
+    }
+
+    /// Get the initial connection to a server
+    ///
+    /// # Panics
+    ///
+    /// Getting a connection is tried for [`MAX_INITIAL_CONNECTION_DURATION_MS`] milliseconds. If
+    /// there's still no connection after that, the function panics.
+    fn get_initial_connection(server: &mut RedisServer, client: &Client) -> Connection {
+        let backoff = Duration::from_millis(BACKOFF_MS);
+        let connection_ts = Instant::now();
+        loop {
+            let err = match client.get_connection() {
+                Err(err) => {
+                    if !err.is_connection_refusal() {
+                        panic_w_server_log_dump!(server, "Could not connect: {err}");
+                    }
+                    err
+                }
+                Ok(con) => {
+                    // We've got a connection! Run with it
+                    return con;
+                }
+            };
+
+            // Getting a connection was refused.
+            // That's worth a retry, as the server might not be up yet.
+
+            // Check if the server is still alive
+            if !server.is_alive() {
+                panic_w_server_log_dump!(server, "Server exited before we could connect");
+            }
+
+            // Check if there is time left to retry
+            let waited_ms = Instant::now().duration_since(connection_ts).as_millis();
+            if waited_ms > MAX_INITIAL_CONNECTION_DURATION_MS {
+                panic_w_server_log_dump!(
+                    server,
+                    "still no connection after {waited_ms} ms. Aborting. Last error: {err}"
+                );
+            }
+
+            // Wait before re-trying
+            sleep(backoff);
+        }
+    }
+
+    /// Wait until the server finished loading its data
+    ///
+    /// # Panics
+    ///
+    /// The server is checked for [`MAX_LOADING_DURATION_MS`] milliseconds if it has
+    /// finished loading its data. If did not finish after that, the function panics.
+    fn wait_until_ready(server: &mut RedisServer, mut con: Connection) {
+        let backoff = Duration::from_millis(BACKOFF_MS);
+        let loading_ts = Instant::now();
+        loop {
+            let err = match con.flushdb() {
+                Ok(_) => return,
+                Err(err) => {
+                    if !matches!(err.kind(), ErrorKind::Server(ServerErrorKind::BusyLoading)) {
+                        panic_w_server_log_dump!(server, "Failed to flush database: {err}");
+                    }
+                    err
+                }
+            };
+
+            // The server is still busy loading its data
+
+            // Check if there is time left to retry
+            let waited_ms = Instant::now().duration_since(loading_ts).as_millis();
+            if waited_ms > MAX_LOADING_DURATION_MS {
+                panic_w_server_log_dump!(
+                    server,
+                    "still loading after {waited_ms} ms. Aborting. Last error: {err}"
+                );
+            }
+
+            // Wait before re-trying
+            sleep(backoff);
         }
     }
 
