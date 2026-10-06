@@ -14,7 +14,7 @@ mod basic {
     use redis::{
         Aggregate, Client, Connection, ConnectionInfo, ConnectionLike, ControlFlow, CopyOptions,
         ErrorKind, ExistenceCheck, ExpireOption, Expiry, FieldExistenceCheck,
-        HashFieldExpirationOptions, IncrexOptions,
+        HashFieldExpirationOptions, IncrexOptions, InfoOptions,
         IntegerReplyOrNoOp::{ExistsButNotRelevant, IntegerReply},
         MSetOptions, ProtocolVersion, PubSubCommands, PushInfo, PushKind, RedisConnectionInfo,
         RedisResult, Role, ScanOptions, SetExpiry, SetOptions, SortedSetAddOptions,
@@ -34,6 +34,7 @@ mod basic {
     use redis_test::*;
 
     use assert_matches::assert_matches;
+    use assertables::{assert_none, assert_some};
     #[cfg(feature = "vector-sets")]
     use serde_json::json;
     use std::collections::{BTreeMap, BTreeSet};
@@ -646,12 +647,27 @@ mod basic {
         let ctx = TestContext::default();
         let mut con = ctx.connection();
 
-        let info: redis::InfoDict = redis::cmd("INFO").query(&mut con).unwrap();
+        let info = con.info().unwrap();
         assert_eq!(info.find(&"role"), Some(&redis_value!(simple:"master")));
         assert_eq!(info.get("role"), Some("master".to_string()));
         assert_eq!(info.get("loading"), Some(false));
+        assert_some!(info.get::<Value>("used_memory"));
         assert!(!info.is_empty());
         assert!(info.contains_key(&"role"));
+    }
+
+    #[test]
+    fn test_info_options() {
+        let ctx = TestContext::default();
+        let mut con = ctx.connection();
+
+        let options = InfoOptions::default()
+            .section("Server")
+            .sections(&["persistence"]);
+        let info = con.info_options(&options).unwrap();
+        assert_some!(info.get::<Value>("os"));
+        assert_eq!(info.get("loading"), Some(false));
+        assert_none!(info.get::<Value>("used_memory"));
     }
 
     #[test]
