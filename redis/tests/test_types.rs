@@ -9,6 +9,7 @@ mod types {
     };
 
     use assert_matches::assert_matches;
+    use assertables::assert_len_eq_x;
     use redis::{ErrorKind, FromRedisValue, RedisError, ToRedisArgs, Value};
     use redis_test::redis_value;
 
@@ -251,12 +252,30 @@ mod types {
 
         for parse_mode in [RedisParseMode::Owned, RedisParseMode::Ref] {
             let d: InfoDict = parse_mode
-                .parse_redis_value(redis_value!(simple:"# this is a comment\nkey1:foo\nkey2:42\n"))
+                .parse_redis_value(redis_value!(simple:"# section1\nkey1:foo\nkey1:bar\n# section2\nkey1:baz\nkey2:42\n"))
                 .unwrap();
 
-            assert_eq!(d.get("key1"), Some("foo".to_string()));
+            assert!(["bar", "baz"].contains(&d.get::<String>("key1").unwrap().as_str()));
             assert_eq!(d.get("key2"), Some(42i64));
             assert_eq!(d.get::<String>("key3"), None);
+
+            assert_eq!(
+                d.get_all_qualified::<String>("section1", "key1"),
+                vec!["foo".to_string(), "bar".to_string()]
+            );
+
+            assert!(!d.is_empty());
+
+            assert!(d.contains_key("key1"));
+            assert!(d.contains_key("key2"));
+            assert!(!d.contains_key("key3"));
+
+            assert!(d.contains_key_qualified("section1", "key1"));
+            assert!(!d.contains_key_qualified("section1", "key2"));
+            assert!(d.contains_key_qualified("section2", "key1"));
+            assert!(d.contains_key_qualified("section2", "key2"));
+
+            assert_len_eq_x!(d, 4);
         }
     }
 

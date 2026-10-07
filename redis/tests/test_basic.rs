@@ -650,12 +650,16 @@ mod basic {
         let mut con = ctx.connection();
 
         let info = con.info().unwrap();
-        assert_eq!(info.find(&"role"), Some(&redis_value!(simple:"master")));
+
+        // Getting existing value (unqualified and qualified)
         assert_eq!(info.get("role"), Some("master".to_string()));
-        assert_eq!(info.get("loading"), Some(false));
+        assert_eq!(
+            info.get_qualified("Replication", "role"),
+            Some("master".to_string())
+        );
+
+        // To cross-check with [`test_info_options`] that `used_memory` is present
         assert_some!(info.get::<Value>("used_memory"));
-        assert!(!info.is_empty());
-        assert!(info.contains_key(&"role"));
     }
 
     #[test]
@@ -667,8 +671,8 @@ mod basic {
             .section("Server")
             .sections(&["persistence"]);
         let info = con.info_options(&options).unwrap();
-        assert_some!(info.get::<Value>("os"));
-        assert_eq!(info.get("loading"), Some(false));
+        assert_some!(info.get_qualified::<Value>("Server", "os"));
+        assert_eq!(info.get_qualified("Persistence", "loading"), Some(false));
         assert_none!(info.get::<Value>("used_memory"));
     }
 

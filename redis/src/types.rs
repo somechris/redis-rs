@@ -753,18 +753,10 @@ pub type RedisFuture<'a, T> = futures_util::future::BoxFuture<'a, RedisResult<T>
 /// An info dictionary type for `INFO`s response.
 ///
 /// This type provides convenient access to key/value data returned by
-/// the `INFO` command.  It acts like a regular mapping but also has
-/// a convenience method `get` which can return data in the appropriate
-/// type.
+/// the `INFO` command.
 ///
 /// For instance this can be used to query the server for the role it's
 /// in (master, slave) etc:
-///
-/// # Caveats
-///
-/// As this struct internally uses a [`HashMap`], it only collects the last value for each key, if
-/// they occur multiple times. So if a key occurs multiple times (e.g.: `module`), this struct holds
-/// only its last value.
 ///
 /// # Examples
 ///
@@ -779,7 +771,8 @@ pub type RedisFuture<'a, T> = futures_util::future::BoxFuture<'a, RedisResult<T>
 /// ```
 #[derive(Debug, Clone)]
 pub struct InfoDict {
-    map: HashMap<String, Value>,
+    /// Map of per-section key/values
+    map: HashMap<String, HashMap<String, Vec<String>>>,
 }
 
 impl InfoDict {
@@ -788,43 +781,87 @@ impl InfoDict {
     /// key and value separated by a colon (`:`).  Lines starting with a
     /// hash (`#`) are ignored.
     pub fn new(kvpairs: &str) -> Self {
-        let mut map = HashMap::new();
+        let mut section = String::new();
+        let mut map: HashMap<String, HashMap<String, Vec<String>>> = HashMap::new();
         for line in kvpairs.lines() {
             if line.is_empty() || line.starts_with('#') {
+                section = line.trim_start_matches(['#', ' ']).to_string();
                 continue;
             }
-            let mut p = line.splitn(2, ':');
-            let (k, v) = match (p.next(), p.next()) {
-                (Some(k), Some(v)) => (k.to_string(), v.to_string()),
+            let mut part = line.splitn(2, ':');
+            let (key, value) = match (part.next(), part.next()) {
+                (Some(key), Some(value)) => (key.to_string(), value.to_string()),
                 _ => continue,
             };
-            map.insert(k, Value::SimpleString(v));
+            map.entry(section.clone())
+                .or_default()
+                .entry(key)
+                .or_default()
+                .push(value);
         }
         Self { map }
     }
 
-    /// Fetches a value by key and converts it into the given type.
+    /// Fetches the last value of a key (ignoring section) and converts it into the given type.
+    ///
     /// Typical types are `String`, `bool` and integer types.
     pub fn get<T: FromRedisValue>(&self, key: &str) -> Option<T> {
-        match self.find(&key) {
-            Some(x) => from_redis_value_ref(x).ok(),
-            None => None,
-        }
+        let value_str = self
+            .map
+            .iter()
+            .filter_map(|(_, sub_map)| sub_map.get(key))
+            .flatten()
+            .last()?;
+        from_redis_value(Value::SimpleString(value_str.to_owned())).ok()
     }
 
-    /// Looks up a key in the info dict.
-    pub fn find(&self, key: &&str) -> Option<&Value> {
-        self.map.get(*key)
+    /// Fetches the last value by section and key and converts it into the given type.
+    /// Typical types are `String`, `bool` and integer types.
+    pub fn get_qualified<T: FromRedisValue>(&self, section: &str, key: &str) -> Option<T> {
+        let value_str = self.map.get(section)?.get(key)?.last()?.clone();
+        from_redis_value(Value::SimpleString(value_str)).ok()
     }
 
-    /// Checks if a key is contained in the info dicf.
-    pub fn contains_key(&self, key: &&str) -> bool {
-        self.find(key).is_some()
+    /// Fetches all values by section and key and converts each value into the given type.
+    /// Typical types are `String`, `bool` and integer types.
+    pub fn get_all_qualified<T: FromRedisValue>(&self, section: &str, key: &str) -> Vec<T> {
+        let Some(sub_map) = self.map.get(section) else {
+            return vec![];
+        };
+
+        let Some(items) = sub_map.get(key) else {
+            return vec![];
+        };
+
+        items
+            .iter()
+            .filter_map(|value_str| {
+                from_redis_value(Value::SimpleString(value_str.to_owned())).ok()
+            })
+            .collect()
     }
 
-    /// Returns the size of the info dict.
+    /// Checks if a key (ignoring section) is contained in the info dict.
+    pub fn contains_key(&self, key: &str) -> bool {
+        self.map
+            .iter()
+            .any(|(_, sub_map)| sub_map.contains_key(key))
+    }
+
+    /// Checks if the section has the key in the info dict.
+    pub fn contains_key_qualified(&self, section: &str, key: &str) -> bool {
+        let Some(sub_map) = self.map.get(section) else {
+            return false;
+        };
+        sub_map.contains_key(key)
+    }
+
+    /// Returns the number of keys in the info dict
     pub fn len(&self) -> usize {
-        self.map.len()
+        self.map
+            .values()
+            .map(|sub_map| sub_map.values().map(|items| items.len()).sum::<usize>())
+            .sum()
     }
 
     /// Checks if the dict is empty.
@@ -834,7 +871,7 @@ impl InfoDict {
 }
 
 impl Deref for InfoDict {
-    type Target = HashMap<String, Value>;
+    type Target = HashMap<String, HashMap<String, Vec<String>>>;
 
     fn deref(&self) -> &Self::Target {
         &self.map
