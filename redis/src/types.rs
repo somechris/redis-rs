@@ -769,10 +769,11 @@ pub type RedisFuture<'a, T> = futures_util::future::BoxFuture<'a, RedisResult<T>
 /// # Examples
 ///
 /// ```rust,no_run
+/// # use redis::TypedCommands;
 /// # fn do_something() -> redis::RedisResult<()> {
 /// # let client = redis::Client::open("redis://127.0.0.1/").unwrap();
 /// # let mut con = client.get_connection().unwrap();
-/// let info : redis::InfoDict = redis::cmd("INFO").query(&mut con)?;
+/// let info = con.info()?;
 /// let role : Option<String> = info.get("role");
 /// # Ok(()) }
 /// ```

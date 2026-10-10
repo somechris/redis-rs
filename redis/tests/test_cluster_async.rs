@@ -23,8 +23,8 @@ mod cluster_async {
 
     use assert_matches::assert_matches;
     use redis::{
-        AsyncCommands, Cmd, ErrorKind, InfoDict, IntoConnectionInfo, RedisError, RedisFuture,
-        RedisResult, Script, ServerErrorKind, Value,
+        AsyncCommands, Cmd, ErrorKind, InfoDict, InfoOptions, IntoConnectionInfo, RedisError,
+        RedisFuture, RedisResult, Script, ServerErrorKind, Value,
         aio::{ConnectionLike, MultiplexedConnection},
         cluster::ClusterClient,
         cluster_async::Connect,
@@ -269,13 +269,12 @@ mod cluster_async {
         let cluster = TestClusterContext::new();
 
         let mut connection = cluster.async_connection().await;
-        let mut cmd = redis::cmd("INFO");
         // The other sections change with time.
         // TODO - after we remove support of redis 6, we can add more than a single section - .arg("Persistence").arg("Memory").arg("Replication")
-        cmd.arg("Clients");
+        let options = InfoOptions::new().section("Clients");
         let value = connection
             .route_command(
-                cmd.clone(),
+                Cmd::info_options(&options),
                 RoutingInfo::MultiNode((MultipleNodeRoutingInfo::AllNodes, None)),
             )
             .await
@@ -290,7 +289,7 @@ mod cluster_async {
 
         let value = connection
             .route_command(
-                cmd.clone(),
+                Cmd::info_options(&options),
                 RoutingInfo::SingleNode(SingleNodeRoutingInfo::ByAddress { host, port }),
             )
             .await
@@ -341,7 +340,7 @@ mod cluster_async {
         let route_to_all_nodes = MultipleNodeRoutingInfo::AllNodes;
         let routing = RoutingInfo::MultiNode((route_to_all_nodes, None));
         let res = connection
-            .route_command(redis::cmd("INFO"), routing)
+            .route_command(Cmd::info(), routing)
             .await
             .unwrap();
         let (addresses, info) = split_to_addresses_and_info(res);
@@ -363,7 +362,7 @@ mod cluster_async {
         let route_to_all_primaries = MultipleNodeRoutingInfo::AllMasters;
         let routing = RoutingInfo::MultiNode((route_to_all_primaries, None));
         let res = connection
-            .route_command(redis::cmd("INFO"), routing)
+            .route_command(Cmd::info(), routing)
             .await
             .unwrap();
         let (addresses, info) = split_to_addresses_and_info(res);
@@ -623,11 +622,7 @@ mod cluster_async {
                         .await
                         .unwrap_or_else(|e| panic!("Failed to get connection: {e}"));
 
-                    let info: InfoDict = redis::Cmd::new()
-                        .arg("INFO")
-                        .query_async(&mut conn)
-                        .await
-                        .expect("INFO");
+                    let info: InfoDict = conn.info().await.unwrap();
                     let role: String = info.get("role").expect("cluster role");
 
                     if role == "master" {

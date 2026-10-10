@@ -1,14 +1,15 @@
 #![cfg(feature = "sentinel")]
 mod support;
 
-use std::collections::HashMap;
 use std::time::Duration;
 
 use crate::support::*;
 use assert_matches::assert_matches;
+use redis::InfoDict;
+use redis::InfoOptions;
 use redis::sentinel::SentinelClientBuilder;
 use redis::{
-    Client, Connection, ConnectionAddr, ConnectionInfo, ErrorKind, RedisError, Role,
+    Client, Connection, ConnectionAddr, ConnectionInfo, ErrorKind, RedisError, Role, TypedCommands,
     sentinel::{Sentinel, SentinelClient, SentinelNodeConnectionInfo},
 };
 use redis_test::server::use_protocol;
@@ -24,24 +25,12 @@ fn log_connection_error(
     }
 }
 
-fn parse_replication_info(value: &str) -> HashMap<&str, &str> {
-    let info_map: std::collections::HashMap<&str, &str> = value
-        .split("\r\n")
-        .filter(|line| !line.trim_start().starts_with('#'))
-        .filter_map(|line| line.split_once(':'))
-        .collect();
-    info_map
+fn assert_is_master_role(info: InfoDict) {
+    assert_eq!(info.get::<String>("role"), Some("master".to_string()));
 }
 
-fn assert_is_master_role(replication_info: String) {
-    let info_map = parse_replication_info(&replication_info);
-    assert_eq!(info_map.get("role"), Some(&"master"));
-}
-
-fn assert_replica_role_and_master_addr(replication_info: String, expected_master: &ConnectionInfo) {
-    let info_map = parse_replication_info(&replication_info);
-
-    assert_eq!(info_map.get("role"), Some(&"slave"));
+fn assert_replica_role_and_master_addr(info: InfoDict, expected_master: &ConnectionInfo) {
+    assert_eq!(info.get::<String>("role"), Some("slave".to_string()));
 
     let (master_host, master_port) = match expected_master.addr() {
         ConnectionAddr::Tcp(host, port)
@@ -55,20 +44,19 @@ fn assert_replica_role_and_master_addr(replication_info: String, expected_master
         _ => panic!("Unknown address type"),
     };
 
-    assert_eq!(info_map.get("master_host"), Some(&master_host.as_str()));
-    assert_eq!(
-        info_map.get("master_port"),
-        Some(&master_port.to_string().as_str())
-    );
+    assert_eq!(info.get("master_host"), Some(master_host.clone()));
+    assert_eq!(info.get("master_port"), Some(master_port.to_string()));
 }
 
 fn assert_is_connection_to_master(conn: &mut Connection) {
-    let info: String = redis::cmd("INFO").arg("REPLICATION").query(conn).unwrap();
+    let options = InfoOptions::new().section("REPLICATION");
+    let info = conn.info_options(&options).unwrap();
     assert_is_master_role(info);
 }
 
 fn assert_connection_is_replica_of_correct_master(conn: &mut Connection, master_client: &Client) {
-    let info: String = redis::cmd("INFO").arg("REPLICATION").query(conn).unwrap();
+    let options = InfoOptions::new().section("REPLICATION");
+    let info = conn.info_options(&options).unwrap();
     assert_replica_role_and_master_addr(info, master_client.get_connection_info());
 }
 
@@ -618,17 +606,14 @@ pub mod async_tests {
     use super::*;
     use redis::{AsyncConnectionConfig, aio::MultiplexedConnection};
 
+    use redis::AsyncTypedCommands;
     use test_macros::async_test;
 
     use crate::{assert_is_master_role, assert_replica_role_and_master_addr};
 
-    async fn async_assert_is_connection_to_master(conn: &mut MultiplexedConnection) {
-        let info: String = redis::cmd("INFO")
-            .arg("REPLICATION")
-            .query_async(conn)
-            .await
-            .unwrap();
-
+    pub(super) async fn async_assert_is_connection_to_master(conn: &mut MultiplexedConnection) {
+        let options = InfoOptions::new().section("REPLICATION");
+        let info = conn.info_options(&options).await.unwrap();
         assert_is_master_role(info);
     }
 
@@ -636,12 +621,8 @@ pub mod async_tests {
         conn: &mut MultiplexedConnection,
         master_client: &Client,
     ) {
-        let info: String = redis::cmd("INFO")
-            .arg("REPLICATION")
-            .query_async(conn)
-            .await
-            .unwrap();
-
+        let options = InfoOptions::new().section("REPLICATION");
+        let info = conn.info_options(&options).await.unwrap();
         assert_replica_role_and_master_addr(info, master_client.get_connection_info());
     }
 
@@ -1218,6 +1199,7 @@ pub mod async_tests {
 
 #[cfg(feature = "r2d2")]
 pub mod pool_tests {
+    use std::collections::HashMap;
     use std::{collections::HashSet, ops::DerefMut};
 
     use super::*;
@@ -1285,8 +1267,10 @@ pub mod pool_tests {
 #[cfg(all(feature = "tokio-comp", feature = "bb8"))]
 pub mod bb8_pool_tests {
     use super::*;
+    use async_tests::async_assert_is_connection_to_master;
     use bb8::Pool;
     use redis::sentinel::AsyncLockedSentinelClient;
+    use std::collections::HashMap;
     use std::collections::HashSet;
 
     fn parse_client_info(value: &str) -> HashMap<&str, &str> {
@@ -1341,12 +1325,7 @@ pub mod bb8_pool_tests {
             // assert if all connections have different IDs
             assert!(client_id_set.insert(client_info_parsed.get("id").unwrap().to_string()));
 
-            let info: String = redis::cmd("INFO")
-                .arg("REPLICATION")
-                .query_async(&mut *conn)
-                .await
-                .unwrap();
-            assert_is_master_role(info);
+            async_assert_is_connection_to_master(&mut conn).await;
         }
 
         // since previous connections are freed, this should work

@@ -133,17 +133,20 @@ use rand::RngExt;
 use std::sync::Mutex;
 use std::{collections::HashMap, num::NonZeroUsize};
 
+use crate::InfoOptions;
 #[cfg(feature = "tls-rustls")]
 use crate::TlsCertificates;
 #[cfg(feature = "aio")]
 use crate::aio::MultiplexedConnection;
 #[cfg(feature = "aio")]
 use crate::client::AsyncConnectionConfig;
+#[cfg(feature = "aio")]
+use crate::commands::AsyncTypedCommands;
 #[cfg(feature = "tls-rustls")]
 use crate::tls::retrieve_tls_certificates;
 use crate::{
     Client, Cmd, Connection, ConnectionAddr, ErrorKind, FromRedisValue, IntoConnectionInfo,
-    ProtocolVersion, RedisConnectionInfo, RedisError, Role, TlsMode, cmd,
+    ProtocolVersion, RedisConnectionInfo, RedisError, Role, TlsMode, TypedCommands, cmd,
     connection::ConnectionInfo,
     errors::ServerErrorKind,
     io::tcp::TcpSettings,
@@ -377,12 +380,10 @@ fn check_role(conn: &mut Connection) -> RedisResult<Role> {
 }
 
 fn check_info_replication(conn: &mut Connection) -> RedisResult<String> {
-    let info: String = crate::cmd("INFO").arg("REPLICATION").query(conn)?;
-
-    //Taken from test_sentinel parse_replication_info
-    let info_map = parse_replication_info(info);
-    match info_map.get("role") {
-        Some(x) => Ok(x.clone()),
+    let options = InfoOptions::new().section("REPLICATION");
+    let info = conn.info_options(&options)?;
+    match info.get("role") {
+        Some(role) => Ok(role),
         None => Err(RedisError::from((
             ErrorKind::UnexpectedReturnType,
             "Missing \"role\" field",
@@ -400,16 +401,6 @@ fn evaluate_role_check_errors(
     }
 
     Err(fallback_role_err)
-}
-
-fn parse_replication_info(value: String) -> HashMap<String, String> {
-    let info_map: std::collections::HashMap<String, String> = value
-        .split("\r\n")
-        .filter(|line| !line.trim_start().starts_with('#'))
-        .filter_map(|line| line.split_once(':'))
-        .map(|(key, val)| (key.to_string(), val.to_string()))
-        .collect();
-    info_map
 }
 
 /// Searches for a valid master with the given name in the list of masters returned by
@@ -490,14 +481,10 @@ async fn async_check_role(conn: &mut MultiplexedConnection) -> RedisResult<Role>
 
 #[cfg(feature = "aio")]
 async fn async_check_info_replication(conn: &mut MultiplexedConnection) -> RedisResult<String> {
-    let info: String = crate::cmd("INFO")
-        .arg("REPLICATION")
-        .query_async(conn)
-        .await?;
-    //Taken from test_sentinel parse_replication_info
-    let info_map = parse_replication_info(info);
-    match info_map.get("role") {
-        Some(x) => Ok(x.clone()),
+    let options = InfoOptions::new().section("REPLICATION");
+    let info = conn.info_options(&options).await?;
+    match info.get("role") {
+        Some(role) => Ok(role),
         None => Err(RedisError::from((
             ErrorKind::UnexpectedReturnType,
             "Missing \"role\" field",
