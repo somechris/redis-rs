@@ -34,7 +34,7 @@ mod basic {
     use redis_test::*;
 
     use assert_matches::assert_matches;
-    use assertables::{assert_none, assert_some};
+    use assertables::{assert_len_ge_x, assert_none, assert_some};
     #[cfg(feature = "vector-sets")]
     use serde_json::json;
     use std::collections::{BTreeMap, BTreeSet};
@@ -668,6 +668,28 @@ mod basic {
         assert_some!(info.get::<Value>("os"));
         assert_eq!(info.get("loading"), Some(false));
         assert_none!(info.get::<Value>("used_memory"));
+    }
+
+    #[test]
+    fn test_save() {
+        let ctx = TestContext::default();
+        let mut con = ctx.connection();
+
+        // The dumpfile we expect
+        let dumpfile = ctx.server.tempdir.as_ref().join("dump.rdb");
+
+        // Before running the save command, the dumpfile must not exist
+        assert!(!dumpfile.exists());
+
+        // Dump the database
+        con.save().unwrap();
+
+        // The dumpfile should now exist
+        assert!(dumpfile.exists());
+
+        // And the dumpfile should at least be 10 bytes big
+        let metadata = std::fs::metadata(&dumpfile).unwrap();
+        assert_len_ge_x!(metadata, 10);
     }
 
     #[test]

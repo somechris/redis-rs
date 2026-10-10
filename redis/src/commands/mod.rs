@@ -981,6 +981,11 @@ implement_commands! {
         ready_cmd!("INFO", options)
     }
 
+    /// Dumps the database synchronously
+    fn save<>() -> () {
+        ready_cmd!("SAVE")
+    }
+
     /// Removes and returns the up to `count` last elements of the list stored at key
     ///
     /// If `count` is not specified, then defaults to last element.
