@@ -1,14 +1,14 @@
 #![cfg(feature = "json")]
 
-use redis::ErrorKind;
 use redis::json::{FphaType, JsonSetOptions, RedisJsonType};
 use redis::{ExistenceCheck, TypedCommands};
 use redis_test::server::Module;
 use redis_test::{REDIS_CE_8_8, REDIS_JSON_8_8, TestContextBuilder, run_test_if_version_supported};
-use serde::Serialize;
 use std::assert_eq;
 use std::collections::HashMap;
 use std::f32::consts::PI;
+
+use redis::ErrorKind;
 
 mod support;
 
@@ -22,30 +22,13 @@ fn test_module_json_serialize_error() {
     let ctx = TestContextBuilder::new().module(Module::Json).build();
     let mut con = ctx.connection();
 
-    #[derive(Debug, Serialize)]
-    struct InvalidSerializedStruct {
-        // Maps in serde_json must have string-like keys
-        // so numbers and strings, anything else will cause the serialization to fail
-        // this is basically the only way to make a serialization fail at runtime
-        // since rust doesnt provide the necessary ability to enforce this
-        pub invalid_json: HashMap<Option<bool>, i64>,
-    }
+    // Maps in JSON need to have string keys. So the following will fail to serialize.
+    let unserializable: HashMap<Option<bool>, i64> = HashMap::from([(None, 42)]);
 
-    let mut test_invalid_value: InvalidSerializedStruct = InvalidSerializedStruct {
-        invalid_json: HashMap::new(),
-    };
+    let err = con.json_set(TEST_KEY, "$", &unserializable).unwrap_err();
 
-    test_invalid_value.invalid_json.insert(None, 2i64);
-
-    let set_invalid =
-        redis::Commands::json_set::<_, _, _, bool>(&mut con, TEST_KEY, "$", &test_invalid_value)
-            .unwrap_err();
-
-    assert_eq!(set_invalid.kind(), ErrorKind::Serialize);
-    assert_eq!(
-        set_invalid.to_string(),
-        String::from("key must be a string")
-    );
+    assert_eq!(err.kind(), ErrorKind::Serialize);
+    assert_eq!(err.to_string(), String::from("key must be a string"));
 }
 
 #[test]
