@@ -657,10 +657,10 @@ fn base_routing(cmd: &[u8]) -> RouteBy {
         | b"MEMORY PURGE"
         | b"MEMORY STATS"
         | b"PING"
+        | b"RANDOMKEY"
         | b"SCRIPT EXISTS"
         | b"UNWATCH"
         | b"WAIT"
-        | b"RANDOMKEY"
         | b"WAITAOF" => RouteBy::AllPrimaries,
 
         b"MGET" | b"DEL" | b"EXISTS" | b"UNLINK" | b"TOUCH" | b"WATCH" => {
