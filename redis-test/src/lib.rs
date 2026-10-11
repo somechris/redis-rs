@@ -85,8 +85,15 @@ pub mod test_context;
 use std::collections::{HashMap, HashSet, VecDeque};
 use std::sync::{Arc, Mutex};
 
-use redis::{
-    Cmd, ConnectionLike, ErrorKind, Pipeline, RedisError, RedisResult, ServerError, Value,
+use redis::{ErrorKind, ServerError};
+
+// Exporting command types from the `redis` crate, so `redis-test` users can spare them adding the
+// `redis` crate
+#[cfg(feature = "aio")]
+pub use redis::{AsyncCommands, AsyncTypedCommands};
+pub use redis::{
+    Cmd, Commands, Connection, ConnectionLike, FromRedisValue, Pipeline, RedisError, RedisResult,
+    ToRedisArgs, TypedCommands, Value, cmd, pipe,
 };
 
 #[cfg(feature = "aio")]
