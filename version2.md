@@ -10,6 +10,41 @@ redis = "2"
 
 ## Breaking Changes
 
+### `redis-test` exports commonly used types (Breaking Change)
+
+To ease use without `redis`, `redis-test` now re-exports the following `redis` entities:
+
+* `AsyncCommands`
+* `AsyncTypedCommands`
+* `Cmd`
+* `Commands`
+* `Connection`
+* `ConnectionAddr`
+* `ConnectionLike`
+* `FromRedisValue`
+* `Pipeline`
+* `RedisError`
+* `RedisResult`
+* `ToRedisArgs`
+* `TypedCommands`
+* `Value`
+* `cmd`
+* `pipe`
+
+Modules that used a wildcard import from `redis-test` and additionally import one of the above entities from `redis`, need to de-dupe imports.
+
+**Migration:** 
+
+```rust
+// Before:
+use redis::{Cmd, InfoDict}; // `Cmd` is now re-exported, `InfoDict` is not
+use redis_test::*
+
+// After:
+use redis::InfoDict;
+use redis_test::*
+```
+
 ### `bool` can be parsed from `true`/`false` Redis strings (Breaking Change)
 
 The strings `0` and `1` already parsed to `bool` in earlier versions.
