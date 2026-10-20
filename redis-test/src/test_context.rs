@@ -1,13 +1,11 @@
 use crate::server::{
-    Module, Output, RedisServer, RedisServerBuilder, RedisServerCommand, use_protocol,
+    Module, Output, RedisServer, RedisServerBuilder, RedisServerCommand, ServerType, use_protocol,
 };
-use crate::utils::{TlsFilePaths, build_single_client};
+use crate::utils::{CommandMultiArgs, TlsFilePaths, build_single_client};
 use crate::version::{AvailableComponents, TestContextVersioning};
-#[cfg(feature = "aio")]
-use redis::RedisResult;
 use redis::{
-    Client, Connection, ConnectionAddr, ErrorKind, InfoOptions, ProtocolVersion, ServerErrorKind,
-    TypedCommands,
+    Client, Connection, ConnectionAddr, ErrorKind, InfoOptions, ProtocolVersion, RedisResult,
+    ServerErrorKind, TypedCommands,
 };
 use std::path::PathBuf;
 use std::thread::sleep;
@@ -25,6 +23,12 @@ const MAX_LOADING_DURATION_MS: u128 = 2500; // 2.5 seconds for loading database 
 /// This is short to ensure responsive tests, but not 0 to assure we're not starving the server
 /// startup on hosts with only few CPUs.
 const BACKOFF_MS: u64 = 1; // 1 ms
+
+/// How long to wait before aborting waiting for replication to sync
+const REPLICATION_WAIT_DURATION: Duration = Duration::from_millis(3000);
+
+/// How long to wait before trying again, if replication was not in sync
+const REPLICATION_SINGLE_SLEEP_DURATION: Duration = Duration::from_millis(50);
 
 /// A builder for [`TestContext`]
 ///
@@ -171,6 +175,7 @@ pub struct TestContext {
     pub server: RedisServer,
     pub client: redis::Client,
     pub protocol: ProtocolVersion,
+    pub followers: Vec<RedisServer>,
 }
 
 impl Default for TestContext {
@@ -210,6 +215,7 @@ impl TestContext {
             server,
             client,
             protocol,
+            followers: vec![],
         }
     }
 
@@ -308,6 +314,74 @@ impl TestContext {
         }
     }
 
+    /// Starts a new follower
+    ///
+    /// The follower is functional and synced to the leader at the end of this function.
+    ///
+    /// This is only supported for plain Tcp leaders
+    pub fn start_follower(&mut self) -> Connection {
+        let ConnectionAddr::Tcp(leader_host, leader_port) = &self.server.addr else {
+            panic!("Replicas only supported for TCP connections")
+        };
+
+        let follower = RedisServerBuilder::new()
+            .server_type(ServerType::Tcp)
+            .refine_and_build(|cmd| {
+                cmd.arg3("--replicaof", leader_host, leader_port.to_string());
+            });
+
+        self.followers.push(follower);
+
+        self.wait_for_replication_sync();
+
+        self.follower_connection(self.followers.len() - 1)
+    }
+
+    fn get_replication_info(con: &mut Connection, follower: bool) -> Option<(String, String)> {
+        let info = con.info().ok()?;
+        let id = info.get::<String>("master_replid")?;
+        let offset_name = if follower {
+            "slave_repl_offset"
+        } else {
+            "master_repl_offset"
+        };
+        let offset = info.get::<String>(offset_name)?;
+        Some((id, offset))
+    }
+
+    /// Helper to allow using `?` when determining replication synchronization status
+    fn is_replication_synced_result(&self) -> RedisResult<bool> {
+        let leader_info = Self::get_replication_info(&mut self.client.get_connection()?, false);
+        for i in 0..self.followers.len() {
+            let mut connection = self.follower_connection_result(i)?;
+            let follower_info = Self::get_replication_info(&mut connection, true);
+            if leader_info != follower_info {
+                return Ok(false);
+            }
+        }
+        Ok(true)
+    }
+
+    /// Yields whether the leader is synced up to all followers
+    pub fn is_replication_synced(&self) -> bool {
+        self.is_replication_synced_result().unwrap_or(false)
+    }
+
+    /// Waits until the leader is synced to all followers
+    pub fn wait_for_replication_sync(&self) {
+        let start = Instant::now();
+        while start.elapsed() < REPLICATION_WAIT_DURATION {
+            if self.is_replication_synced() {
+                return;
+            }
+            sleep(REPLICATION_SINGLE_SLEEP_DURATION);
+        }
+        panic!(
+            "replication did not sync up wihtin {} ms",
+            REPLICATION_WAIT_DURATION.as_millis()
+        );
+    }
+
     pub fn connection(&self) -> redis::Connection {
         self.client.get_connection().unwrap()
     }
@@ -320,6 +394,23 @@ impl TestContext {
     #[cfg(feature = "aio")]
     pub async fn async_pubsub(&self) -> RedisResult<redis::aio::PubSub> {
         self.client.get_async_pubsub().await
+    }
+
+    fn follower_connection_result(&self, i: usize) -> RedisResult<Connection> {
+        let follower = &self.followers[i];
+        let client = build_single_client(
+            follower.connection_info_with_protocol(self.protocol),
+            &None,
+            false,
+        )?;
+        client.get_connection()
+    }
+
+    /// Gets a connection to a follower
+    ///
+    /// See [`start_follower`](Self::start_follower) to start followers
+    pub fn follower_connection(&self, i: usize) -> Connection {
+        self.follower_connection_result(i).unwrap()
     }
 
     pub fn stop_server(&mut self) {
