@@ -141,8 +141,6 @@ fn spawn_master_server(
         .tls_paths_opt(tlspaths.clone())
         .modules(modules)
         .refine_and_build(|cmd| {
-            // Minimize startup delay
-            cmd.arg2("--repl-diskless-sync-delay", "0");
             if tlspaths.is_some() {
                 cmd.arg2("--tls-replication", "yes");
             }

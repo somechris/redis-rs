@@ -331,6 +331,10 @@ impl RedisServer {
         // Redis 8.6+. So we fall back to `on-empty-db`, which also covers the typical setup.
         redis_cmd.arg2("--repl-diskless-load", "on-empty-db");
 
+        // Don't wait for replication sync, start right away as our instances typically do not
+        // contain much data. So waiting only makes things slower and does not spare many resources.
+        redis_cmd.arg2("--repl-diskless-sync-delay", "0");
+
         redis_cmd.load_modules(&builder.modules);
 
         let tempdir = builder.tempdir.unwrap_or_else(|| {
