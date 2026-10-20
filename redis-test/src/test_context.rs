@@ -316,10 +316,26 @@ impl TestContext {
 
     /// Starts a new follower
     ///
+    /// See [`start_refined_follower`](Self::start_refined_follower) to refine the start command.
+    ///
     /// The follower is functional and synced to the leader at the end of this function.
     ///
     /// This is only supported for plain Tcp leaders
     pub fn start_follower(&mut self) -> Connection {
+        self.start_refined_follower(|_| {})
+    }
+
+    /// Starts a new follower while allowing to customize the start command
+    ///
+    /// See [`start_follower`](Self::start_follower) to start without refining the command.
+    ///
+    /// The follower is functional and synced to the leader at the end of this function.
+    ///
+    /// This is only supported for plain Tcp leaders
+    pub fn start_refined_follower(
+        &mut self,
+        refiner: impl FnOnce(&mut RedisServerCommand),
+    ) -> Connection {
         let ConnectionAddr::Tcp(leader_host, leader_port) = &self.server.addr else {
             panic!("Replicas only supported for TCP connections")
         };
@@ -328,6 +344,8 @@ impl TestContext {
             .server_type(ServerType::Tcp)
             .refine_and_build(|cmd| {
                 cmd.arg3("--replicaof", leader_host, leader_port.to_string());
+
+                refiner(cmd);
             });
 
         self.followers.push(follower);
