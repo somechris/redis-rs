@@ -322,6 +322,25 @@ pub trait TestContextVersioning {
     }
 }
 
+/// Skips the current test
+///
+/// # Arguments
+///
+/// * `$ret` - (Optional. Default: `()`) The value to return
+/// * `$reason` - Why the test is skipped
+/// * `$arg` - (Optional. Multiple) Arguments to `$reason`
+#[macro_export]
+macro_rules! skip {
+    ($reason:literal $(, $arg:tt)*) => {{
+        $crate::skip!((), $reason $(, $arg)*);
+    }};
+    ($ret: expr, $reason:literal $(, $arg:tt)*) => {{
+        eprint!("Skipping the test: ");
+        eprintln!($reason, $($arg)*);
+        return $ret;
+    }}
+}
+
 /// Skips the current test if it does not support the given component
 ///
 /// # Arguments
@@ -334,11 +353,11 @@ macro_rules! skip_if_context_does_not_support {
     ($ctx:expr, $component:expr) => {{ $crate::skip_if_context_does_not_support!($ctx, $component, ()) }};
     ($ctx:expr, $component:expr, $ret:expr) => {{
         if !redis_test::version::TestContextVersioning::supports(&$ctx, $component) {
-            eprintln!(
-                "Skipping the test because the running server does not support {:?}.",
+            $crate::skip!(
+                $ret,
+                "the running server does not support {:?}.",
                 $component
             );
-            return $ret;
         }
     }};
 }
